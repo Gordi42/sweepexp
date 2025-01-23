@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sweepexp"
+version = "0.1.0"
+authors = [
+  { name="Silvano Gordian Rosenau", email="silvano.rosenau@uni-hamburg.de" },
+]
+description = "A python package for running parallel experiments across parameter grids with MPI."
+readme = "README.md"
+keywords = []
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Development Status :: 2 - Pre-Alpha",
+]
+dependencies = [
+  "lazypimp",
+]
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/Gordi42/sweepexp"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = [
+  "--import-mode=importlib",
+]
