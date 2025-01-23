@@ -6,13 +6,14 @@ SweepExp
    :hidden:
 
    installation
-   getting_started
-   auto_examples/index
+   usage
    package_api
 
 Features
 --------
-- TODO: Add a list of features
+- **Flexible Experimentation with Parameter Grids:** SweepExp simplifies running experiments over a grid of parameter combinations. Results are efficiently stored in zarr format, ready for analysis with xarray.
+- **Parallelization:** Support for parallelization using multiprocessing, or MPI for high-performance computing.
+- **User-Friendly API:**  Define the function to be tested, set up parameter sweeps, and specify return types effortlessly.
 
 Navigation
 ----------
@@ -27,17 +28,11 @@ Navigation
 
       How to install.
 
-   .. grid-item-card::  Getting Started
-      :link: getting_started
+   .. grid-item-card::  Usage
+      :link: usage
       :link-type: doc
 
-      A quick introduction to the package.
-
-   .. grid-item-card::  Gallery
-      :link: auto_examples/index
-      :link-type: doc
-
-      A collection of examples demonstrating the usage of SweepExp.
+      How to use.
 
    .. grid-item-card::  API
       :link: package_api
