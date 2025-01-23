@@ -1,0 +1,26 @@
+name: Lint with Ruff
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12' # or your preferred version
+
+      # Install Ruff
+      - name: Install Ruff
+        run: pip install ruff
+
+      # Run Ruff
+      - name: Run Ruff
+        run: ruff check src tests --ignore=FIX
