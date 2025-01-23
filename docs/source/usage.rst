@@ -29,7 +29,7 @@ function with all the combinations:
          "result1": str,
          "result2": float
       },
-      output_file = "data/results.zarr",
+      save_path = "data/results.zarr",
    )
 
    results = sweep.run()
@@ -63,7 +63,7 @@ Let's walk though the example above:
    - `func`: The function to run.
    - `parameters`: A dictionary with the parameters to sweep. The keys are the parameter names and the values are lists with the values to test.
    - `return_values`: A dictionary with the return values of the function. The keys are the return value names and the values are the types of the return values.
-   - `output_file`: The path to the output file.
+   - `save_path`: The path to the output file.
 3. We run the experiments with the `run` method.
 
 Mask Parameter Combinations
@@ -118,7 +118,7 @@ The following example shows how to modify the above example to include the UUID:
          "result1": str,
          "result2": float
       },
-      output_file = "data/results.zarr",
+      save_path = "data/results.zarr",
    )
 
    # Mark the experiment ID to be passed to the function
@@ -146,7 +146,7 @@ with the `reset_status` method:
    sweep.reset_status()
 
 .. note::
-    When passing a file path to the `output_file` parameter, where the file
+    When passing a file path to the `save_path` parameter, where the file
     exists, the `SweepExp` object will attempt to load the existing file. Since
     this will also load the status of the experiments, the `run` method will
     only run experiments that have not been started.

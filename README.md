@@ -48,7 +48,7 @@ sweep = SweepExpParallel(
         "result1": str,
         "result2": float
     },
-    output_file = "data/results.zarr",
+    save_path = "data/results.zarr",
 )
 
 results = sweep.run()
