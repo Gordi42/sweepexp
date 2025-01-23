@@ -4,7 +4,9 @@ A python package for running parallel experiments across parameter grids with MP
 
 ## Features
 
-TODO: List the features of the project.
+- **Flexible Experimentation with Parameter Grids:** SweepExp simplifies running experiments over a grid of parameter combinations. Results are efficiently stored in zarr format, ready for analysis with xarray.
+- **Parallelization:** Support for parallelization using multiprocessing, or MPI for high-performance computing.
+- **User-Friendly API:**  Define the function to be tested, set up parameter sweeps, and specify return types effortlessly.
 
 ## Installation
 
@@ -23,12 +25,37 @@ pip install -e .
 ```
 
 ## Usage
-To use SweepExp, import it in your Python code:
+The followin example shows how to setup a simple experiment that is run on a grid of parameters. Where each parameter combination is run in parallel on separate processes. The results are saved to a zarr file, which can be easily loaded with xarray.
 
 ```python
-import sweepexp
-```
 
+from sweepexp import SweepExpParallel
+
+# Define a function to be tested
+def my_function(param1: str, param2: float) -> dict:
+    # Do something with the parameters
+    result1 = param1.upper()
+    result2 = param2 ** 2
+    return {"result1": result1, "result2": result2}
+
+sweep = SweepExpParallel(
+    func = my_function,
+    parameters = {
+        "param1": ["a", "b", "c"],
+        "param2": [1.0, 2.0, 3.0]
+    },
+    return_values = {
+        "result1": str,
+        "result2": float
+    },
+    output_file = "data/results.zarr",
+)
+
+results = sweep.run()
+
+print(results)
+```
+For more information on how to use the package, please refer to the [documentation](https://sweepexp.readthedocs.io/)
 
 
 ## Author
