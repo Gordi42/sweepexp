@@ -59,12 +59,10 @@ Let's walk though the example above:
 1. We define a function `my_function` that takes two parameters `param1` and
    `param2` and returns a dictionary with two values `result1` and `result2`.
 2. We create a `SweepExpParallel` object with the following parameters:
+
    - `func`: The function to run.
-   - `parameters`: A dictionary with the parameters to sweep. The keys are the
-     parameter names and the values are lists with the values to test.
-   - `return_values`: A dictionary with the return values of the function. The
-     keys are the return value names and the values are the types of the return
-     values.
+   - `parameters`: A dictionary with the parameters to sweep. The keys are the parameter names and the values are lists with the values to test.
+   - `return_values`: A dictionary with the return values of the function. The keys are the return value names and the values are the types of the return values.
    - `output_file`: The path to the output file.
 3. We run the experiments with the `run` method.
 
