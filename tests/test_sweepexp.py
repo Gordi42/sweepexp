@@ -1,11 +1,11 @@
-"""Test the SweepExpBase class."""
+"""Test the SweepExp class."""
 from __future__ import annotations
 
 import numpy as np
 import pytest
 import xarray as xr
 
-from sweepexp import SweepExpBase
+from sweepexp import SweepExp
 
 
 # ================================================================
@@ -91,25 +91,25 @@ def save_path(temp_dir, request):
 #  Test initialization
 # ----------------------------------------------------------------
 def test_init_no_file(parameters, return_dict, exp_func):
-    """Test the initialization of the SweepExpBase class without a file."""
+    """Test the initialization of the SweepExp class without a file."""
     # Create the experiment
-    exp = SweepExpBase(
+    exp = SweepExp(
         func=exp_func,
         parameters=parameters,
         return_values=return_dict,
     )
-    assert isinstance(exp, SweepExpBase)
+    assert isinstance(exp, SweepExp)
 
 def test_init_with_nonexistent_file(parameters, return_dict, exp_func, save_path):
-    """Test the initialization of the SweepExpBase class with a nonexistent file."""
+    """Test the initialization of the SweepExp class with a nonexistent file."""
     # Create the experiment
-    exp = SweepExpBase(
+    exp = SweepExp(
         func=exp_func,
         parameters=parameters,
         return_values=return_dict,
         save_path=save_path,
     )
-    assert isinstance(exp, SweepExpBase)
+    assert isinstance(exp, SweepExp)
 
 def test_init_with_valid_existing_file(): ...
 
@@ -120,9 +120,9 @@ def test_init_with_invalid_existing_file(): ...
 # ----------------------------------------------------------------
 
 def test_properties_get(parameters, return_dict, exp_func):
-    """Test the properties of the SweepExpBase class."""
+    """Test the properties of the SweepExp class."""
     # Create the experiment
-    exp = SweepExpBase(
+    exp = SweepExp(
         func=exp_func,
         parameters=parameters,
         return_values=return_dict,
@@ -152,9 +152,9 @@ def test_properties_get(parameters, return_dict, exp_func):
     assert np.isnan(exp.duration.values).all()
 
 def test_properties_set(parameters, return_dict, exp_func):
-    """Test setting the properties of the SweepExpBase class."""
+    """Test setting the properties of the SweepExp class."""
     # Create the experiment
-    exp = SweepExpBase(
+    exp = SweepExp(
         func=exp_func,
         parameters=parameters,
         return_values=return_dict,
@@ -209,7 +209,7 @@ def test_save(parameters, return_dict, exp_func, save_path, request):
     if skip is not None and save_path.suffix in [".zarr", ".nc"]:
         pytest.skip("Skipping test with objects")
     # Create the experiment
-    exp = SweepExpBase(
+    exp = SweepExp(
         func=exp_func,
         parameters=parameters,
         return_values=return_dict,
@@ -228,7 +228,7 @@ def test_load(parameters, return_dict, exp_func, save_path, request):
     if skip is not None and save_path.suffix in [".zarr", ".nc"]:
         pytest.skip("Skipping test with objects")
     # Create the experiment
-    exp = SweepExpBase(
+    exp = SweepExp(
         func=exp_func,
         parameters=parameters,
         return_values=return_dict,
@@ -237,7 +237,7 @@ def test_load(parameters, return_dict, exp_func, save_path, request):
     # Save the data
     exp.save()
     # try to load the dataset
-    ds = SweepExpBase.load(save_path)
+    ds = SweepExp.load(save_path)
     # Check that all variables exist
     for var in exp.data.variables:
         assert var in ds.variables
@@ -250,10 +250,10 @@ def test_invalid_file_format(invalid_file):
 
     # loading
     with pytest.raises(ValueError, match=msg):
-        SweepExpBase.load(invalid_file)
+        SweepExp.load(invalid_file)
 
     # saving
-    exp = SweepExpBase(
+    exp = SweepExp(
         func=lambda: None,
         parameters={"a": [1]},
         return_values={},
@@ -263,7 +263,7 @@ def test_invalid_file_format(invalid_file):
         exp.save()
 
     # saving when no save path is set
-    exp = SweepExpBase(
+    exp = SweepExp(
         func=lambda: None,
         parameters={"a": [1]},
         return_values={},
@@ -287,7 +287,7 @@ def test_invalid_file_format(invalid_file):
 ]))
 def test_convert_parameters(para_in, dtype):
     """Test the _convert_parameters function."""
-    converted = SweepExpBase._convert_parameters({"a": para_in})["a"]
+    converted = SweepExp._convert_parameters({"a": para_in})["a"]
     assert converted.dtype is dtype
 
 @pytest.mark.parametrize(*("type_in, type_out", [
@@ -301,5 +301,5 @@ def test_convert_parameters(para_in, dtype):
 ]))
 def test_convert_return_types(type_in, type_out):
     """Test the _convert_return_types function."""
-    converted = SweepExpBase._convert_return_types({"a": type_in})["a"]
+    converted = SweepExp._convert_return_types({"a": type_in})["a"]
     assert converted is type_out

@@ -16,7 +16,6 @@ from lazypimp import setup
 # ================================================================
 if TYPE_CHECKING:  # pragma: no cover
     from .sweepexp import SweepExp
-    from .sweepexp_base import SweepExpBase
     from .sweepexp_mpi import SweepExpMPI
     from .sweepexp_parallel import SweepExpParallel
 
@@ -28,7 +27,6 @@ all_modules_by_origin = { }
 
 all_imports_by_origin = {
     "sweepexp.sweepexp": ["SweepExp"],
-    "sweepexp.sweepexp_base": ["SweepExpBase"],
     "sweepexp.sweepexp_mpi": ["SweepExpMPI"],
     "sweepexp.sweepexp_parallel": ["SweepExpParallel"],
 }

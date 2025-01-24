@@ -1,10 +1,10 @@
 """Running the experiments in parallel using mpi."""
 from __future__ import annotations
 
-from sweepexp.sweepexp_base import SweepExpBase
+from sweepexp import SweepExp
 
 
-class SweepExpMPI(SweepExpBase):
+class SweepExpMPI(SweepExp):
 
     """Running the experiments in parallel using mpi."""
 
