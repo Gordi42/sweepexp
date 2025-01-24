@@ -1,3 +1,4 @@
+[![codecov](https://codecov.io/github/Gordi42/sweepexp/graph/badge.svg?token=SHVDIIOL8Y)](https://codecov.io/github/Gordi42/sweepexp)
 # SweepExp
 
 A python package for running parallel experiments across parameter grids with MPI.
