@@ -21,6 +21,7 @@ classifiers = [
 dependencies = [
   "lazypimp",
   "xarray",
+  "dill",
 ]
 license = {file = "LICENSE"}
 
@@ -33,6 +34,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 addopts = [
   "--import-mode=importlib",
+]
+markers = [
+  "objects: mark tests to contain objects",
+  "serial",
 ]
 
 [tool.ruff.lint]
