@@ -25,6 +25,9 @@ dependencies = [
 ]
 license = {file = "LICENSE"}
 
+[project.optional-dependencies]
+full = ["zarr", "netCDF4"]
+
 [project.urls]
 Repository = "https://github.com/Gordi42/sweepexp"
 

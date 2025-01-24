@@ -27,7 +27,7 @@ jobs:
 
     - name: Install the base package
       run: |
-        pip install -e .
+        pip install -e .[full]
 
     - name: Run the tests
       run: |
