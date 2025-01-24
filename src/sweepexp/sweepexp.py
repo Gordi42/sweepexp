@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import warnings
-from abc import abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -10,6 +9,8 @@ from uuid import uuid4
 import dill
 import numpy as np
 import xarray as xr
+
+from sweepexp import log
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
@@ -37,9 +38,9 @@ class SweepExp:
         path_exists = self.save_path is not None and self.save_path.exists()
         self._data = self._load_data_from_file() if path_exists else self._create_data()
 
-    @abstractmethod
-    def run(self, **kwargs: any) -> None:  # pragma: no cover
-        """Run the experiment."""
+    def run(self, **kwargs: any) -> None:
+        """Run all experiments with the status 'not started'."""
+        # TODO(Silvano): Add content
         raise NotImplementedError
 
     # ================================================================
@@ -75,8 +76,51 @@ class SweepExp:
 
     def _load_data_from_file(self) -> None:
         """Load the xarray dataset from a file."""
-        # TODO(Silvano): Add content
-        raise NotImplementedError
+        log.info(f"Foud data at {self.save_path}. Loading data.")
+        data = self.load(self.save_path)
+
+        # We need to do a bunch of checks to make sure the data is correct
+
+        # Compare the parameters
+        if set(data.coords) != set(self.parameters.keys()):
+            msg = "Parameter mismatch: "
+            msg += f"Expected: {set(self.parameters.keys())}, "
+            msg += f"Got: {set(data.coords)}."
+            raise ValueError(msg)
+
+        # Check if the parameter values are the same
+        for name, values in self.parameters.items():
+            obt_values = data.coords[name].values
+            # check if values are of a numeric type
+            if (np.issubdtype(values.dtype, np.number) and
+                    not np.issubdtype(values.dtype, complex)):
+                # we skip complex numbers, because they are stored weirdly in
+                # netcdf files
+                parameter_mismatch = not np.allclose(values, obt_values)
+            # check if values are of a boolean type
+            elif np.issubdtype(values.dtype, bool):
+                parameter_mismatch = not np.all(values == obt_values)
+            # else the values are of type object and all entries are strings
+            elif all(isinstance(val, str) for val in values):
+                parameter_mismatch = not all(values == obt_values)
+            # Otherwise, we can only check if the lengths are the same
+            else:
+                parameter_mismatch = len(values) != len(obt_values)
+            if parameter_mismatch:
+                msg = f"Parameter mismatch for {name}: "
+                msg += f"Expected: {values}, "
+                msg += f"Got: {obt_values}."
+                raise ValueError(msg)
+
+        # Compare the return values
+        if not set(self.return_values).issubset(set(data.data_vars)):
+            msg = "Return value mismatch: "
+            msg += f"Expected: {set(self.return_values)}, "
+            msg += f"Got: {set(data.data_vars)}."
+            raise ValueError(msg)
+
+        # Check if the return types are the same
+        return data
 
     def save(self) -> None:
         """Save the xarray dataset to the save path."""

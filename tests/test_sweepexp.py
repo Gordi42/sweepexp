@@ -111,9 +111,91 @@ def test_init_with_nonexistent_file(parameters, return_dict, exp_func, save_path
     )
     assert isinstance(exp, SweepExp)
 
-def test_init_with_valid_existing_file(): ...
+def test_init_with_valid_existing_file(
+        parameters, return_dict, exp_func, save_path, request):
+    """Test the initialization of the SweepExp class with a valid existing file."""
+    # Skip the test if objects are present (since they cannot be saved)
+    skip = request.node.get_closest_marker("objects")
+    if skip is not None and save_path.suffix in [".zarr", ".nc"]:
+        pytest.skip("Skipping test with objects")
 
-def test_init_with_invalid_existing_file(): ...
+    # Create the experiment
+    exp = SweepExp(
+        func=exp_func,
+        parameters=parameters,
+        return_values=return_dict,
+        save_path=save_path,
+    )
+    # Modify some properties
+    loc = (slice(None),) * len(parameters)
+    exp.uuid.loc[loc] = "test"
+    exp.status.loc[loc] = "skip"
+    exp.duration.loc[loc] = 1.0
+    # get the first name of the return dict
+    if return_dict.keys():
+        name = next(iter(return_dict.keys()))
+        exp.data[name].loc[loc] = 1
+    # Save the data
+    exp.save()
+
+    # Create a new experiment with the same file
+    sweep = SweepExp(
+        func=exp_func,
+        parameters=parameters,
+        return_values=return_dict,
+        save_path=save_path,
+    )
+
+    # Check that the experiment was loaded correctly
+    assert isinstance(sweep, SweepExp)
+    # Check that the changes are present
+    assert (sweep.uuid.values == "test").any()
+    assert (sweep.status.values == "skip").any()
+    assert (sweep.duration.values == 1.0).any()
+    if return_dict.keys():
+        assert (sweep.data[name].values == 1).any()
+
+
+@pytest.mark.parametrize(*("para, ret, msg", [
+    pytest.param({"extra": [1]}, {},
+                 "Parameter mismatch", id="extra parameter"),
+    pytest.param({"int": [1, 3]}, {},
+                 "Parameter mismatch", id="different parameter values (int)"),
+    pytest.param({"bool": [False]}, {},
+                    "Parameter mismatch", id="different parameter values (bool)"),
+    pytest.param({"float": [1.01/3 + 1e-4]}, {},
+                    "Parameter mismatch", id="different parameter values (float)"),
+    pytest.param({"str": ["b"]}, {},
+                  "Parameter mismatch", id="different parameter values (str)"),
+    pytest.param({"np": np.linspace(0, 1.1, 2)}, {},
+                  "Parameter mismatch", id="different parameter values (np)"),
+    pytest.param({}, {"extra": int},
+                 "Return value mismatch", id="extra return value"),
+]))
+def test_init_with_invalid_existing_file(para, ret, msg, save_path):
+    """Test the initialization of the SweepExp class with an invalid existing file."""
+    parameters = {"int": [1, 2], "bool": [True], "float": [1.01/3], "str": ["a"],
+                  "np": np.linspace(0, 1, 2)}
+    return_dict = {"r_int": int, "r_bool": bool, "r_float": float, "r_str": str}
+    # Create the experiment
+    SweepExp(
+        func=lambda: None,  # dummy function (does not matter here)
+        parameters=parameters,
+        return_values=return_dict,
+        save_path=save_path,
+    ).save()
+
+    parameters.update(para)
+    return_dict.update(ret)
+
+    with pytest.raises(ValueError, match=msg):
+        SweepExp(
+            func=lambda: None,  # dummy function (does not matter here)
+            parameters=parameters,
+            return_values=return_dict,
+            save_path=save_path,
+        )
+
 
 # ----------------------------------------------------------------
 #  Test properties
