@@ -14,7 +14,7 @@ from lazypimp import setup
 # ================================================================
 #  Disable lazy loading for type checking
 # ================================================================
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .sweepexp import SweepExp
     from .sweepexp_base import SweepExpBase
     from .sweepexp_mpi import SweepExpMPI

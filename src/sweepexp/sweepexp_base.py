@@ -11,7 +11,7 @@ import dill
 import numpy as np
 import xarray as xr
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
 
 
