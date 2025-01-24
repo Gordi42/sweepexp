@@ -247,9 +247,11 @@ def test_load(parameters, return_dict, exp_func, save_path, request):
 def test_invalid_file_format(invalid_file):
     """Test loading a file with an invalid format."""
     msg = "The file extension is not supported."
+
     # loading
     with pytest.raises(ValueError, match=msg):
         SweepExpBase.load(invalid_file)
+
     # saving
     exp = SweepExpBase(
         func=lambda: None,
@@ -257,6 +259,16 @@ def test_invalid_file_format(invalid_file):
         return_values={},
         save_path=invalid_file,
     )
+    with pytest.raises(ValueError, match=msg):
+        exp.save()
+
+    # saving when no save path is set
+    exp = SweepExpBase(
+        func=lambda: None,
+        parameters={"a": [1]},
+        return_values={},
+    )
+    msg = "The save path is not set. Set the save path before saving."
     with pytest.raises(ValueError, match=msg):
         exp.save()
 
