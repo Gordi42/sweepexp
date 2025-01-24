@@ -11,7 +11,7 @@ authors = [
 description = "A python package for running parallel experiments across parameter grids with MPI."
 readme = "README.md"
 keywords = []
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
