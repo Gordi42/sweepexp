@@ -4,12 +4,15 @@ from __future__ import annotations
 import warnings
 from abc import abstractmethod
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import dill
 import numpy as np
 import xarray as xr
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class SweepExpBase:
