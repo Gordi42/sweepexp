@@ -330,6 +330,49 @@ def test_duration(parameters, return_dict, exp_func):
     exp.timeit = True
     assert exp.duration.equals(duration)
 
+def test_priority_property(parameters, return_dict, exp_func):
+    """Test the priority property."""
+    # Create the experiment
+    exp = SweepExp(
+        func=exp_func,
+        parameters=parameters,
+        return_values=return_dict,
+    )
+    # Priority disabled:
+    # Check that priority is not in the data variables
+    assert "priority" not in exp.data.data_vars
+    # Check that the priority property can not be accessed
+    msg = "Priorities are disabled."
+    with pytest.raises(AttributeError, match=msg):
+        _ = exp.priority
+
+    # Enable the priority property
+    exp.enable_priorities = True
+    # Check that the priority is now in the data variables
+    assert "priority" in exp.data.data_vars
+    # Check that the priority property can be accessed
+    assert isinstance(exp.priority, xr.DataArray)
+    # Check that all values are 0
+    assert (exp.priority.values == 0).all()
+    # Check that the priority has attributes
+    for attr in ["units", "long_name", "description"]:
+        assert attr in exp.priority.attrs
+
+    # Set the priority to a value
+    loc = (slice(None),) * len(parameters)
+    exp.priority.loc[loc] = 1
+    priority = exp.priority
+
+    # Disable the priority property
+    exp.enable_priorities = False
+    # Check that we can not access the priority property anymore
+    with pytest.raises(AttributeError, match=msg):
+        _ = exp.priority
+
+    # Enable the priority property again and check that the priority is the same
+    exp.enable_priorities = True
+    assert exp.priority.equals(priority)
+
 
 # ----------------------------------------------------------------
 #  Test data saving and loading

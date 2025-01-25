@@ -34,6 +34,7 @@ class SweepExp:
         self.pass_uuid = False
         self.auto_save = False
         self.timeit = False
+        self.enable_priorities = False
 
         # create the xarray dataset (or load it from a file)
         path_exists = self.save_path is not None and self.save_path.exists()
@@ -335,6 +336,28 @@ class SweepExp:
         )
 
     @property
+    def enable_priorities(self) -> bool:
+        """Whether to enable priorities for the experiments."""
+        return self._enable_priorities
+
+    @enable_priorities.setter
+    def enable_priorities(self, enable_priorities: bool) -> None:
+        self._enable_priorities = enable_priorities
+        if not enable_priorities:
+            return
+        # Check if the priority is already in the data
+        if "priority" in self.data.data_vars:
+            return
+        # If not, add the priority to the data
+        self.data["priority"] = xr.DataArray(
+            data=np.full(self.shape, 0, dtype=int),
+            dims=self.parameters.keys(),
+            attrs={"units": "",
+                   "long_name": "Priority of each experiment.",
+                   "description": "Experiments with higher priority are run first."},
+        )
+
+    @property
     def shape(self) -> tuple[int]:
         """The shape of the parameter grid."""
         return tuple(len(values) for values in self.parameters.values())
@@ -391,3 +414,12 @@ class SweepExp:
             raise AttributeError(msg)
         return self.data["duration"]
 
+    @property
+    def priority(self) -> xr.DataArray:
+        """The priority of each experiment."""
+        # check if priorities are enabled
+        if not self.enable_priorities:
+            msg = "Priorities are disabled. "
+            msg += "Set 'enable_priorities' to True before accessing the priority."
+            raise AttributeError(msg)
+        return self.data["priority"]
