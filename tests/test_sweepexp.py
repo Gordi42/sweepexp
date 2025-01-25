@@ -129,7 +129,6 @@ def test_init_with_valid_existing_file(
     # Modify some properties
     loc = (slice(None),) * len(parameters)
     exp.status.loc[loc] = "S"
-    exp.duration.loc[loc] = 1.0
     # get the first name of the return dict
     if return_dict.keys():
         name = next(iter(return_dict.keys()))
@@ -149,7 +148,6 @@ def test_init_with_valid_existing_file(
     assert isinstance(sweep, SweepExp)
     # Check that the changes are present
     assert (sweep.status.values == "S").any()
-    assert (sweep.duration.values == 1.0).any()
     if return_dict.keys():
         assert (sweep.data[name].values == 1).any()
 
@@ -218,13 +216,10 @@ def test_properties_get(parameters, return_dict, exp_func):
     # Check if the xarray dataarrays can be accessed
     assert isinstance(exp.data, xr.Dataset)
     assert isinstance(exp.status, xr.DataArray)
-    assert isinstance(exp.duration, xr.DataArray)
 
     # Check the content of the xarray dataarrays
     # All status values should be "not started"
     assert all(exp.status.values.flatten() == "N")
-    # All durations should be np.nan
-    assert np.isnan(exp.duration.values).all()
 
 def test_properties_set(parameters, return_dict, exp_func):
     """Test setting the properties of the SweepExp class."""
@@ -244,20 +239,14 @@ def test_properties_set(parameters, return_dict, exp_func):
 
     # test setting values in the xarray dataarrays
     loc = (slice(None),) * len(parameters)
-    # status
     status = "S"
     assert not (exp.status.values == status).any()
     exp.status.loc[loc] = status
     assert (exp.status.values == status).any()
-    # duration
-    duration = 1.0
-    assert not (exp.duration.values == duration).any()
-    exp.duration.loc[loc] = duration
-    assert (exp.duration.values == duration).any()
 
     # Test readonly properties (should raise an AttributeError)
     readonly_properties = ["func", "parameters", "return_values", "save_path",
-                           "data", "status", "duration"]
+                           "data", "status"]
     for prop in readonly_properties:
         with pytest.raises(AttributeError):
             setattr(exp, prop, None)
@@ -297,6 +286,50 @@ def test_uuid(parameters, return_dict, exp_func):
     # Enable the uuid property again and check that the uuid is the same
     exp.pass_uuid = True
     assert exp.uuid.equals(old_uuid)
+
+def test_duration(parameters, return_dict, exp_func):
+    """Test the duration property."""
+    # Create the experiment
+    exp = SweepExp(
+        func=exp_func,
+        parameters=parameters,
+        return_values=return_dict,
+    )
+    # Timeit disabled:
+    # Check that duration is not in the data variables
+    assert "duration" not in exp.data.data_vars
+    # Check that the duration property can not be accessed
+    msg = "Timeit is disabled."
+    with pytest.raises(AttributeError, match=msg):
+        _ = exp.duration
+
+    # Enable the duration property
+    exp.timeit = True
+    # Check that the duration is now in the data variables
+    assert "duration" in exp.data.data_vars
+    # Check that the duration property can be accessed
+    assert isinstance(exp.duration, xr.DataArray)
+    # Check that all values are nan
+    assert np.isnan(exp.duration.values).all()
+    # Check that the duration has attributes
+    for attr in ["units", "long_name", "description"]:
+        assert attr in exp.duration.attrs
+
+    # Set the duration to a value
+    loc = (slice(None),) * len(parameters)
+    exp.duration.loc[loc] = 1
+    duration = exp.duration
+
+    # Disable the duration property
+    exp.timeit = False
+    # Check that we can not access the duration property anymore
+    with pytest.raises(AttributeError, match=msg):
+        _ = exp.duration
+
+    # Enable the duration property again and check that the duration is the same
+    exp.timeit = True
+    assert exp.duration.equals(duration)
+
 
 # ----------------------------------------------------------------
 #  Test data saving and loading

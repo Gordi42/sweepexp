@@ -33,6 +33,7 @@ class SweepExp:
 
         self.pass_uuid = False
         self.auto_save = False
+        self.timeit = False
 
         # create the xarray dataset (or load it from a file)
         path_exists = self.save_path is not None and self.save_path.exists()
@@ -50,7 +51,6 @@ class SweepExp:
         """Create the xarray dataset."""
         # Add metadata variables
         variables = [
-            {"name": "duration", "type": float, "value": np.nan},
             {"name": "status", "type": str, "value": "N"},
         ]
         # Add the return values
@@ -304,6 +304,28 @@ class SweepExp:
         self._auto_save = auto_save
 
     @property
+    def timeit(self) -> bool:
+        """Whether to measure the duration of each experiment."""
+        return self._timeit
+
+    @timeit.setter
+    def timeit(self, timeit: bool) -> None:
+        self._timeit = timeit
+        if not timeit:
+            return
+        # Check if the duration is already in the data
+        if "duration" in self.data.data_vars:
+            return
+        # If not, add the duration to the data
+        self.data["duration"] = xr.DataArray(
+            data=np.full(self.shape, np.nan, dtype=float),
+            dims=self.parameters.keys(),
+            attrs={"units": "seconds",
+                   "long_name": "Duration of the experiment.",
+                   "description": "The time it took to run the experiment."},
+        )
+
+    @property
     def shape(self) -> tuple[int]:
         """The shape of the parameter grid."""
         return tuple(len(values) for values in self.parameters.values())
@@ -331,7 +353,8 @@ class SweepExp:
         """
         # check if uuid is enabled
         if not self.pass_uuid:
-            msg = "UUID is disabled. Set 'pass_uuid' to True to enable it."
+            msg = "UUID is disabled. "
+            msg += "Set 'pass_uuid' to True before accessing the uuid."
             raise AttributeError(msg)
 
         return self.data["uuid"]
@@ -352,5 +375,10 @@ class SweepExp:
     @property
     def duration(self) -> xr.DataArray:
         """The duration of each experiment."""
+        # check if timeit is enabled
+        if not self.timeit:
+            msg = "Timeit is disabled. "
+            msg += "Set 'timeit' to True before accessing the duration."
+            raise AttributeError(msg)
         return self.data["duration"]
 
