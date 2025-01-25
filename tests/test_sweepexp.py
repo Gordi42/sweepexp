@@ -128,7 +128,6 @@ def test_init_with_valid_existing_file(
     )
     # Modify some properties
     loc = (slice(None),) * len(parameters)
-    exp.uuid.loc[loc] = "test"
     exp.status.loc[loc] = "S"
     exp.duration.loc[loc] = 1.0
     # get the first name of the return dict
@@ -149,7 +148,6 @@ def test_init_with_valid_existing_file(
     # Check that the experiment was loaded correctly
     assert isinstance(sweep, SweepExp)
     # Check that the changes are present
-    assert (sweep.uuid.values == "test").any()
     assert (sweep.status.values == "S").any()
     assert (sweep.duration.values == 1.0).any()
     if return_dict.keys():
@@ -219,13 +217,10 @@ def test_properties_get(parameters, return_dict, exp_func):
 
     # Check if the xarray dataarrays can be accessed
     assert isinstance(exp.data, xr.Dataset)
-    assert isinstance(exp.uuid, xr.DataArray)
     assert isinstance(exp.status, xr.DataArray)
     assert isinstance(exp.duration, xr.DataArray)
 
     # Check the content of the xarray dataarrays
-    # All uuids should be unique
-    assert len(exp.uuid.values.flatten()) == len(set(exp.uuid.values.flatten()))
     # All status values should be "not started"
     assert all(exp.status.values.flatten() == "N")
     # All durations should be np.nan
@@ -240,13 +235,7 @@ def test_properties_set(parameters, return_dict, exp_func):
         return_values=return_dict,
     )
 
-
     # Test setting properties that are allowed
-
-    # pass_uuid
-    assert not exp.pass_uuid
-    exp.pass_uuid = True
-    assert exp.pass_uuid
 
     # auto_save
     assert not exp.auto_save
@@ -255,11 +244,6 @@ def test_properties_set(parameters, return_dict, exp_func):
 
     # test setting values in the xarray dataarrays
     loc = (slice(None),) * len(parameters)
-    # uuid
-    uuid = "test"
-    assert not (exp.uuid.values == uuid).any()
-    exp.uuid.loc[loc] = uuid
-    assert (exp.uuid.values == uuid).any()
     # status
     status = "S"
     assert not (exp.status.values == status).any()
@@ -273,10 +257,46 @@ def test_properties_set(parameters, return_dict, exp_func):
 
     # Test readonly properties (should raise an AttributeError)
     readonly_properties = ["func", "parameters", "return_values", "save_path",
-                           "data", "uuid", "status", "duration"]
+                           "data", "status", "duration"]
     for prop in readonly_properties:
         with pytest.raises(AttributeError):
             setattr(exp, prop, None)
+
+def test_uuid(parameters, return_dict, exp_func):
+    """Test the uuid property."""
+    # Create the experiment
+    exp = SweepExp(
+        func=exp_func,
+        parameters=parameters,
+        return_values=return_dict,
+    )
+    # UUID disabled:
+    # Check that uuid is not in the data variables
+    assert "uuid" not in exp.data.data_vars
+    # Check that the uuid property can not be accessed
+    msg = "UUID is disabled."
+    with pytest.raises(AttributeError, match=msg):
+        _ = exp.uuid
+
+    # Enable the uuid property
+    exp.pass_uuid = True
+    # Check that the uuid is now in the data variables
+    assert "uuid" in exp.data.data_vars
+    # Check that the uuid property can be accessed
+    assert isinstance(exp.uuid, xr.DataArray)
+    # Check that the uuid is unique
+    assert len(exp.uuid.values.flatten()) == len(set(exp.uuid.values.flatten()))
+
+    # Disable the uuid property
+    old_uuid = exp.uuid
+    exp.pass_uuid = False
+    # Check that we can not access the uuid property anymore
+    with pytest.raises(AttributeError, match=msg):
+        _ = exp.uuid
+
+    # Enable the uuid property again and check that the uuid is the same
+    exp.pass_uuid = True
+    assert exp.uuid.equals(old_uuid)
 
 # ----------------------------------------------------------------
 #  Test data saving and loading

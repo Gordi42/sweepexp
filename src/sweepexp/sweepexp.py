@@ -50,29 +50,20 @@ class SweepExp:
         """Create the xarray dataset."""
         # Add metadata variables
         variables = [
-            {"name": "uuid", "type": str, "value": ""},
             {"name": "duration", "type": float, "value": np.nan},
             {"name": "status", "type": str, "value": "N"},
         ]
         # Add the return values
         for name, dtype in self.return_values.items():
             variables.append({"name": name, "type": dtype, "value": np.nan})
-        # Create the xarray dataset
-        data = xr.Dataset(
+        # Create the xarray dataset and return it
+        return xr.Dataset(
             data_vars={var["name"]: (
                     self.parameters.keys(),
                     np.full(self.shape, var["value"], dtype=var["type"]))
                 for var in variables},
             coords=self.parameters,
         )
-        # Create the uuids
-        uuids = np.array([str(uuid4())
-                          for _ in range(np.prod(self.shape))],
-                        ).reshape(self.shape)
-
-        # set the uuids in the xarray dataset
-        data["uuid"].data = uuids
-        return data
 
     def _load_data_from_file(self) -> None:
         """Load the xarray dataset from a file."""
@@ -289,6 +280,19 @@ class SweepExp:
     @pass_uuid.setter
     def pass_uuid(self, pass_uuid: bool) -> None:
         self._pass_uuid = pass_uuid
+        if not pass_uuid:
+            return
+        # Check if the uuid is already in the data
+        if "uuid" in self.data.data_vars:
+            return
+        # If not, add the uuid to the data
+        self.data["uuid"] = xr.DataArray(
+            data=np.array([str(uuid4())
+                           for _ in range(np.prod(self.shape))],
+                           ).reshape(self.shape),
+            dims=self.parameters.keys(),
+        )
+
 
     @property
     def auto_save(self) -> bool:
@@ -316,6 +320,11 @@ class SweepExp:
     @property
     def uuid(self) -> xr.DataArray:
         """The uuid of each parameter combination."""
+        # check if uuid is enabled
+        if not self.pass_uuid:
+            msg = "UUID is disabled. Set 'pass_uuid' to True to enable it."
+            raise AttributeError(msg)
+
         return self.data["uuid"]
 
     @property
