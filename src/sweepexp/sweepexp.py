@@ -57,13 +57,20 @@ class SweepExp:
         for name, dtype in self.return_values.items():
             variables.append({"name": name, "type": dtype, "value": np.nan})
         # Create the xarray dataset and return it
-        return xr.Dataset(
+        data = xr.Dataset(
             data_vars={var["name"]: (
                     self.parameters.keys(),
                     np.full(self.shape, var["value"], dtype=var["type"]))
                 for var in variables},
             coords=self.parameters,
         )
+        # Add a bit of info to the status variable
+        data["status"].attrs = {
+            "long_name": "Experiment status.",
+            "description": "The status of the experiment.",
+            "values": "N: not started, C: completed, F: failed, S: skip",
+        }
+        return data
 
     def _load_data_from_file(self) -> None:
         """Load the xarray dataset from a file."""
@@ -291,8 +298,10 @@ class SweepExp:
                            for _ in range(np.prod(self.shape))],
                            ).reshape(self.shape),
             dims=self.parameters.keys(),
+            attrs={"units": "",
+                   "long_name": "UUID of the experiment.",
+                   "description": "A unique identifier for each experiment."},
         )
-
 
     @property
     def auto_save(self) -> bool:
