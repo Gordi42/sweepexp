@@ -191,6 +191,22 @@ def test_init_with_invalid_existing_file(para, ret, msg, save_path):
             save_path=save_path,
         )
 
+@pytest.mark.parametrize(*("parameters, return_dict, msg", [
+    pytest.param({"status": [1]}, {}, "parameter",
+                 id="status in parameters"),
+    pytest.param({}, {"status": int}, "return value",
+                 id="status in return values"),
+]))
+def test_init_reserved_names(parameters, return_dict, msg):
+    """Test the initialization of the SweepExp class with reserved names."""
+    # Create the experiment
+    with pytest.raises(ValueError, match=msg):
+        SweepExp(
+            func=lambda: None,  # dummy function (does not matter here)
+            parameters=parameters,
+            return_values=return_dict,
+        )
+
 # ----------------------------------------------------------------
 #  Test properties
 # ----------------------------------------------------------------
@@ -380,6 +396,63 @@ def test_priority_property(parameters, return_dict, exp_func):
     exp.enable_priorities = True
     assert exp.priority.equals(priority)
 
+# ----------------------------------------------------------------
+#  Custom arguments
+# ----------------------------------------------------------------
+
+@pytest.mark.parametrize(*("name, value", [
+    pytest.param("test", 1, id="int"),
+    pytest.param("test", 1.0, id="float"),
+    pytest.param("test", 1.0 + 1j, id="complex"),
+    pytest.param("test", "a", id="str"),
+    pytest.param("test", True, id="bool"),
+    pytest.param("test", MyObject(1), id="object"),
+    pytest.param("test", None, id="None"),
+]))
+def test_valid_custom_arguments(name, value):
+    """Test the custom_arguments property and the adding function."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
+        return_values={},
+    )
+    # Check that the custom arguments are empty
+    assert exp.custom_arguments == set()
+    # Enable uuid and check that it is in the custom arguments
+    exp.pass_uuid = True
+    assert "uuid" in exp.custom_arguments
+    # Disable uuid and check that it is not in the custom arguments
+    exp.pass_uuid = False
+    assert "uuid" not in exp.custom_arguments
+    # Add a custom argument
+    exp.add_custom_argument(name, value)
+    # Check that the custom argument is in the custom arguments
+    assert name in exp.custom_arguments
+    # Check that a dataarray with the custom argument is in the data
+    assert name in exp.data.data_vars
+    # Check that the values are correct
+    assert (exp.data[name].values == value).all()
+
+@pytest.mark.parametrize(*("name, msg", [
+    pytest.param("uuid", "reserved"),
+    pytest.param("duration", "reserved"),
+    pytest.param("priority", "reserved"),
+    pytest.param("status", "reserved"),
+    pytest.param("x", "parameter"),
+    pytest.param("existing", "already a custom"),
+]))
+def test_invalid_custom_arguments(name, msg):
+    """Test the add_custom_argument function with invalid arguments."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
+        return_values={},
+    )
+    exp.add_custom_argument("existing", 1)
+    with pytest.raises(ValueError, match=msg):
+        exp.add_custom_argument(name, 1)
 
 # ----------------------------------------------------------------
 #  Test data saving and loading
@@ -534,3 +607,19 @@ def test_reset_status_invalid(states):
     # Reset the status with invalid states
     with pytest.raises(ValueError, match="Invalid states"):
         exp.reset_status(states)
+
+# ----------------------------------------------------------------
+#  Test the run function
+# ----------------------------------------------------------------
+
+def test_standard_run(): ...
+
+def test_run_with_uuid(): ...
+
+def test_run_with_timeit(): ...
+
+def test_run_with_priorities(): ...
+
+def test_run_with_failures(): ...
+
+def test_run_with_custom_arguments(): ...

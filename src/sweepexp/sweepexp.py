@@ -16,6 +16,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
 
 
+RESERVED_ARGUMENTS = {"uuid", "status", "duration", "priority"}
+
 class SweepExp:
 
     """Base class for the sweepexp experiment."""
@@ -25,6 +27,21 @@ class SweepExp:
                  parameters: dict[str, list],
                  return_values: dict[str, type],
                  save_path: Path | str | None = None) -> None:
+
+        # Check that none of the parameters are reserved
+        reserved_parameters = set(parameters) & RESERVED_ARGUMENTS
+        if reserved_parameters:
+            msg = "The following parameter names are reserved: "
+            msg += f"{reserved_parameters}."
+            msg += "Please choose different names."
+            raise ValueError(msg)
+        reserved_return_values = set(return_values) & RESERVED_ARGUMENTS
+        if reserved_return_values:
+            msg = "The following return value names are reserved: "
+            msg += f"{reserved_return_values}."
+            msg += "Please choose different names."
+            raise ValueError(msg)
+
         # Set the parameters
         self._func = func
         self._parameters = self._convert_parameters(parameters)
@@ -58,9 +75,14 @@ class SweepExp:
             The default value of the argument.
 
         """
+        # check that the name is not reserved
+        if name in RESERVED_ARGUMENTS:
+            msg = f"Argument '{name}' is a reserved argument."
+            msg += "Please choose a different name."
+            raise ValueError(msg)
         # check that the name is not already in the parameters
         if name in self.parameters:
-            msg = f"Argument '{name}' is already in the parameters."
+            msg = f"Argument '{name}' is already a parameter."
             raise ValueError(msg)
         if name in self.custom_arguments:
             msg = f"Argument '{name}' is already a custom argument."
