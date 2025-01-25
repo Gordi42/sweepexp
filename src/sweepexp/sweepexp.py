@@ -31,6 +31,7 @@ class SweepExp:
         self._return_values = self._convert_return_types(return_values)
         self._save_path = None if save_path is None else Path(save_path)
 
+        self._custom_arguments = set()
         self.pass_uuid = False
         self.auto_save = False
         self.timeit = False
@@ -44,6 +45,33 @@ class SweepExp:
         """Run all experiments with the status 'not started'."""
         # TODO(Silvano): Add content
         raise NotImplementedError
+
+    def add_custom_argument(self, name: str, default_value: any) -> None:
+        """
+        Add custom arguments to the experiment function.
+
+        Parameters
+        ----------
+        name : str
+            The name of the argument.
+        default_value : any
+            The default value of the argument.
+
+        """
+        # check that the name is not already in the parameters
+        if name in self.parameters:
+            msg = f"Argument '{name}' is already in the parameters."
+            raise ValueError(msg)
+        if name in self.custom_arguments:
+            msg = f"Argument '{name}' is already a custom argument."
+            raise ValueError(msg)
+        # add the argument to the custom arguments
+        self.custom_arguments.add(name)
+        # add the argument to the data
+        self.data[name] = xr.DataArray(
+            data=np.full(self.shape, default_value),
+            dims=self.parameters.keys(),
+        )
 
     # ================================================================
     #  Data handling
@@ -270,6 +298,11 @@ class SweepExp:
         return self._return_values
 
     @property
+    def custom_arguments(self) -> set[str]:
+        """Custom arguments of the experiment function."""
+        return self._custom_arguments
+
+    @property
     def save_path(self) -> Path | None:
         """
         Path to save the results to.
@@ -289,7 +322,11 @@ class SweepExp:
     def pass_uuid(self, pass_uuid: bool) -> None:
         self._pass_uuid = pass_uuid
         if not pass_uuid:
+            # remove the uuid from the custom arguments if it is there
+            self._custom_arguments.discard("uuid")
             return
+        # Add the uuid to the custom arguments
+        self._custom_arguments.add("uuid")
         # Check if the uuid is already in the data
         if "uuid" in self.data.data_vars:
             return

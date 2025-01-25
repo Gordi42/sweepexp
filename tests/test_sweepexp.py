@@ -266,9 +266,13 @@ def test_uuid(parameters, return_dict, exp_func):
     msg = "UUID is disabled."
     with pytest.raises(AttributeError, match=msg):
         _ = exp.uuid
+    # Check that uuid is not in the custom arguments
+    assert "uuid" not in exp.custom_arguments
 
     # Enable the uuid property
     exp.pass_uuid = True
+    # Check that the uuid is now in the custom arguments
+    assert "uuid" in exp.custom_arguments
     # Check that the uuid is now in the data variables
     assert "uuid" in exp.data.data_vars
     # Check that the uuid property can be accessed
@@ -279,6 +283,8 @@ def test_uuid(parameters, return_dict, exp_func):
     # Disable the uuid property
     old_uuid = exp.uuid
     exp.pass_uuid = False
+    # Check that the uuid is not in the custom arguments
+    assert "uuid" not in exp.custom_arguments
     # Check that we can not access the uuid property anymore
     with pytest.raises(AttributeError, match=msg):
         _ = exp.uuid
@@ -286,6 +292,7 @@ def test_uuid(parameters, return_dict, exp_func):
     # Enable the uuid property again and check that the uuid is the same
     exp.pass_uuid = True
     assert exp.uuid.equals(old_uuid)
+    assert "uuid" in exp.custom_arguments
 
 def test_duration(parameters, return_dict, exp_func):
     """Test the duration property."""
