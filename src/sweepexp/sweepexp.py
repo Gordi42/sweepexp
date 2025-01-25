@@ -319,7 +319,16 @@ class SweepExp:
 
     @property
     def uuid(self) -> xr.DataArray:
-        """The uuid of each parameter combination."""
+        """
+        The uuid of each parameter combination.
+
+        Description
+        -----------
+        The uuid is a string that uniquely identifies each experiment. By default,
+        uuids are disbabled to save memory. To enable them, set 'pass_uuid' to
+        True. When enabled, the experiment function will receive the uuid as an
+        argument. So make sure to add a uuid argument to the function signature.
+        """
         # check if uuid is enabled
         if not self.pass_uuid:
             msg = "UUID is disabled. Set 'pass_uuid' to True to enable it."
