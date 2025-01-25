@@ -50,9 +50,9 @@ class SweepExp:
         """Create the xarray dataset."""
         # Add metadata variables
         variables = [
-            {"name": "uuid", "type": "str", "value": ""},
+            {"name": "uuid", "type": str, "value": ""},
             {"name": "duration", "type": float, "value": np.nan},
-            {"name": "status", "type": object, "value": "not started"},
+            {"name": "status", "type": str, "value": "N"},
         ]
         # Add the return values
         for name, dtype in self.return_values.items():
@@ -170,10 +170,58 @@ class SweepExp:
         msg += " Supported extensions are: '.zarr', '.nc', '.cdf', '.pkl'."
         raise ValueError(msg)
 
+    # ================================================================
+    #  Status handling
+    # ================================================================
 
-    def reset_status(self) -> None:
-        """Reset the status of all experiments to 'not started'."""
-        raise NotImplementedError
+    def reset_status(self, states: str | list[str] | None) -> None:
+        """
+        Reset the status of experiments to 'N' (not started).
+
+        Parameters
+        ----------
+        states : list[str] | None
+            The states to reset. If None, all states with status 'C' (completed)
+            and 'F' (failed) are reset
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            from sweepexp import SweepExp
+            sweep = SweepExp(...)  # Initialize the sweep
+
+            # Reset all experiments with status 'C' and 'F' to 'N'
+            sweep.reset_status()
+            # Reset all experiments with status 'C' to 'N'
+            sweep.reset_status("C")
+            # Reset all experiments with status 'S' and 'F' to 'N'
+            sweep.reset_status(["S", "F"])
+
+        """
+        states = states or ["C", "F"]
+        if isinstance(states, str):
+            states = [states]
+
+        # Check if the states are valid
+        valid_states = ["N", "C", "F", "S"]
+        if not set(states).issubset(valid_states):
+            msg = "Invalid states: "
+            msg += f"Got: {states}. "
+            msg += f"But expected: {valid_states}."
+            raise ValueError(msg)
+
+        # Reset the status of all experiments with the given states
+        for state in states:
+            self._set_status(state, "N")
+
+    def _set_status(self, old_status: str, new_status: str) -> None:
+        """Set the status of all experiments with the old status to the new status."""
+        # Get the indices of the experiments with the old status
+        indices = np.where(self.status == old_status)
+        # Set the status of the experiments to the new status
+        self.status.data[indices] = new_status
 
     # ================================================================
     #  Conversion functions
@@ -272,7 +320,15 @@ class SweepExp:
 
     @property
     def status(self) -> xr.DataArray:
-        """The status of each parameter combination."""
+        """
+        The status of each parameter combination.
+
+        Possible values are:
+        - 'N': not started
+        - 'C': completed
+        - 'F': failed
+        - 'S': skip
+        """
         return self.data["status"]
 
     @property

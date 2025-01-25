@@ -129,7 +129,7 @@ def test_init_with_valid_existing_file(
     # Modify some properties
     loc = (slice(None),) * len(parameters)
     exp.uuid.loc[loc] = "test"
-    exp.status.loc[loc] = "skip"
+    exp.status.loc[loc] = "S"
     exp.duration.loc[loc] = 1.0
     # get the first name of the return dict
     if return_dict.keys():
@@ -150,11 +150,10 @@ def test_init_with_valid_existing_file(
     assert isinstance(sweep, SweepExp)
     # Check that the changes are present
     assert (sweep.uuid.values == "test").any()
-    assert (sweep.status.values == "skip").any()
+    assert (sweep.status.values == "S").any()
     assert (sweep.duration.values == 1.0).any()
     if return_dict.keys():
         assert (sweep.data[name].values == 1).any()
-
 
 @pytest.mark.parametrize(*("para, ret, msg", [
     pytest.param({"extra": [1]}, {},
@@ -196,7 +195,6 @@ def test_init_with_invalid_existing_file(para, ret, msg, save_path):
             save_path=save_path,
         )
 
-
 # ----------------------------------------------------------------
 #  Test properties
 # ----------------------------------------------------------------
@@ -229,7 +227,7 @@ def test_properties_get(parameters, return_dict, exp_func):
     # All uuids should be unique
     assert len(exp.uuid.values.flatten()) == len(set(exp.uuid.values.flatten()))
     # All status values should be "not started"
-    assert all(exp.status.values.flatten() == "not started")
+    assert all(exp.status.values.flatten() == "N")
     # All durations should be np.nan
     assert np.isnan(exp.duration.values).all()
 
@@ -263,7 +261,7 @@ def test_properties_set(parameters, return_dict, exp_func):
     exp.uuid.loc[loc] = uuid
     assert (exp.uuid.values == uuid).any()
     # status
-    status = "skip"
+    status = "S"
     assert not (exp.status.values == status).any()
     exp.status.loc[loc] = status
     assert (exp.status.values == status).any()
@@ -279,7 +277,6 @@ def test_properties_set(parameters, return_dict, exp_func):
     for prop in readonly_properties:
         with pytest.raises(AttributeError):
             setattr(exp, prop, None)
-
 
 # ----------------------------------------------------------------
 #  Test data saving and loading
@@ -323,7 +320,6 @@ def test_load(parameters, return_dict, exp_func, save_path, request):
     # Check that all variables exist
     for var in exp.data.variables:
         assert var in ds.variables
-
 
 @pytest.mark.parametrize("invalid_file", ["test", "test.txt", "test.csv", "test.json"])
 def test_invalid_file_format(invalid_file):
@@ -385,3 +381,53 @@ def test_convert_return_types(type_in, type_out):
     """Test the _convert_return_types function."""
     converted = SweepExp._convert_return_types({"a": type_in})["a"]
     assert converted is type_out
+
+# ----------------------------------------------------------------
+#  Test status updates
+# ----------------------------------------------------------------
+
+@pytest.mark.parametrize(*("states, expected_status", [
+    pytest.param(None,
+                 np.array([["N", "N", "S"],
+                           ["N", "N", "S"],
+                           ["S", "N", "N"]]),
+                 id="default"),
+    pytest.param("S",
+                 np.array([["F", "N", "N"],
+                           ["F", "N", "N"],
+                           ["N", "C", "N"]]),
+                 id="skip"),
+    pytest.param(["F", "S"],
+                 np.array([["N", "N", "N"],
+                           ["N", "N", "N"],
+                           ["N", "C", "N"]]),
+                 id="finish and skip"),
+]))
+def test_reset_status(states, expected_status):
+    """Test the reset_status function."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
+        return_values={},
+    )
+    exp.status.values = np.array([["F", "N", "S"],
+                                  ["F", "N", "S"],
+                                  ["S", "C", "N"]])
+    # Reset the status
+    exp.reset_status(states)
+    # Check that the status is as expected
+    assert (exp.status.values == expected_status).all()
+
+@pytest.mark.parametrize("states", ["X", "f", "s", "c", "n"])
+def test_reset_status_invalid(states):
+    """Test the reset_status function with invalid states."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
+        return_values={},
+    )
+    # Reset the status with invalid states
+    with pytest.raises(ValueError, match="Invalid states"):
+        exp.reset_status(states)
