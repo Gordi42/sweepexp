@@ -464,7 +464,8 @@ def test_invalid_custom_arguments(name, msg):
 #  Test data saving and loading
 # ----------------------------------------------------------------
 
-def test_save(parameters, return_dict, exp_func, save_path, request):
+@pytest.mark.parametrize("mode", ["x", "w"])
+def test_save(parameters, return_dict, exp_func, save_path, request, mode):  # noqa: PLR0913
     """Test saving the data."""
     skip = request.node.get_closest_marker("objects")
     if skip is not None and save_path.suffix in [".zarr", ".nc"]:
@@ -479,7 +480,7 @@ def test_save(parameters, return_dict, exp_func, save_path, request):
     # Check that the file does not exist
     assert not save_path.exists()
     # Save the data
-    exp.save()
+    exp.save(mode)
     # Check that the file exists
     assert save_path.exists()
 
@@ -823,7 +824,7 @@ def test_run_with_uuid(temp_dir):
     # Create a function that takes the uuis an an argument and write
     # something to a file with the uuid in the name
     def my_experiment(x: int, uuid: str) -> dict:
-        with Path.open(f"{temp_dir}/output_{uuid}.txt", "w") as file:
+        with open(f"{temp_dir}/output_{uuid}.txt", "w") as file:  # noqa: PTH123
             file.write(f"Experiment with x={x} and uuid={uuid}.")
         return {}
 
@@ -841,7 +842,7 @@ def test_run_with_uuid(temp_dir):
     for i in range(3):
         uuid = sweep.uuid.values.flatten()[i]
         assert (temp_dir / f"output_{uuid}.txt").exists()
-        with Path.open(f"{temp_dir}/output_{uuid}.txt", "r") as file:
+        with open(f"{temp_dir}/output_{uuid}.txt") as file:  # noqa: PTH123
             assert file.read() == f"Experiment with x={i+1} and uuid={uuid}."
 
 def test_run_with_timeit():
