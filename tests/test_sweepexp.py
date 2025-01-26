@@ -1,6 +1,10 @@
 """Test the SweepExp class."""
 from __future__ import annotations
 
+import time
+from pathlib import Path
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 import xarray as xr
@@ -16,6 +20,8 @@ class MyObject:
         self.value = value
 
     def __eq__(self, other: MyObject) -> bool:
+        if not isinstance(other, MyObject):
+            return False
         return self.value == other.value
 
 # ================================================================
@@ -526,6 +532,29 @@ def test_invalid_file_format(invalid_file):
     with pytest.raises(ValueError, match=msg):
         exp.save()
 
+def test_save_existing_data(parameters, return_dict, exp_func, save_path, request):
+    skip = request.node.get_closest_marker("objects")
+    if skip is not None and save_path.suffix in [".zarr", ".nc"]:
+        pytest.skip("Skipping test with objects")
+    # Create the experiment
+    exp = SweepExp(
+        func=exp_func,
+        parameters=parameters,
+        return_values=return_dict,
+        save_path=save_path,
+    )
+    assert not save_path.exists()
+    exp.save()
+    # Check that the file exists
+    assert save_path.exists()
+    # Save the data with the default argument should raise an error
+    msg = "There is already data at the save path."
+    with pytest.raises(FileExistsError, match=msg):
+        exp.save()
+    # With mode="w" the file should be overwritten
+    exp.save(mode="w")
+    assert save_path.exists()
+
 # ----------------------------------------------------------------
 #  Test conversion functions
 # ----------------------------------------------------------------
@@ -609,17 +638,285 @@ def test_reset_status_invalid(states):
         exp.reset_status(states)
 
 # ----------------------------------------------------------------
+#  Test the run helper functions
+# ----------------------------------------------------------------
+
+@pytest.mark.parametrize(*("status, expepcted_indices", [
+    pytest.param("N", np.array([[0, 0, 0], [0, 1, 0]]), id="N"),
+    pytest.param("S", np.array([[0, 1, 1], [0, 2, 0]]), id="S"),
+    pytest.param("F", np.array([[0, 2, 1]]), id="F"),
+    pytest.param("C", np.array([[0, 0, 1]]), id="C"),
+    pytest.param(None, np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0],
+                                 [0, 1, 1], [0, 2, 0], [0, 2, 1]]), id="all"),
+    pytest.param(["F", "C"], np.array([[0, 0, 1], [0, 2, 1]]), id="F and C"),
+]))
+def test_get_indices(status, expepcted_indices):
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1.0], "y": ["a", "b", "c"], "z": [1, 2]},
+        return_values={},
+    )
+    # set the status
+    exp.status.values = np.array([[["N", "C"], ["N", "S"], ["S", "F"]]])
+    # get the indices
+    indices = exp._get_indices(status)
+    # check that the indices are as expected
+    assert np.all(expepcted_indices == indices.T)
+
+@pytest.mark.parametrize(*("with_priorities, expected_indices, first_kw", [
+    pytest.param(True,
+                 np.array([[0, 1, 0], [0, 0, 1], [0, 2, 0]]),
+                 {"x": 1.0, "y": "b", "z": 1},
+                 id="with priorities"),
+    pytest.param(False,
+                 np.array([[0, 0, 1], [0, 1, 0], [0, 2, 0]]),
+                 {"x": 1.0, "y": "a", "z": 2},
+                 id="without priorities"),
+]))
+def test_sort_indices(with_priorities, expected_indices, first_kw):
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1.0], "y": ["a", "b", "c"], "z": [1, 2]},
+        return_values={},
+    )
+    # set the priority
+    exp.enable_priorities = True
+    exp.priority.values = np.array([[[4, 2], [1, 5], [6, 3]]])
+    exp.enable_priorities = with_priorities
+    # get the indices
+    indices = np.array([[0, 0, 1], [0, 1, 0], [0, 2, 0]]).T
+    # sort the indices
+    indices = exp._sort_indices(indices)
+    # check that the indices are as expected
+    assert np.all(expected_indices == indices.T)
+    # get the first index and check that the correct kwargs are returned
+    first_index = next(zip(*indices, strict=True))
+    assert exp._get_kwargs(first_index) == first_kw
+
+@pytest.mark.parametrize(*("ret_dict, ret_values", [
+    pytest.param({"a": int}, {"a": 1}, id="int"),
+    pytest.param({"b": float}, {"b": 1.0}, id="float"),
+    pytest.param({"c": complex}, {"c": 1.0 + 1j}, id="complex"),
+    pytest.param({"d": str}, {"d": "a"}, id="str"),
+    pytest.param({"e": bool}, {"e": False}, id="bool"),
+    pytest.param({"f": np.ndarray}, {"f": np.linspace(0, 1, 10)}, id="np.ndarray"),
+    pytest.param({"g": object}, {"g": MyObject(1)}, id="object"),
+    pytest.param({"a": int, "b": float}, {"a": 1, "b": 1.0}, id="int and float"),
+]))
+def test_set_return_values(ret_dict, ret_values):
+    """Test the _set_return_values function."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1.0], "y": ["a", "b", "c"], "z": [1, 2]},
+        return_values=ret_dict,
+    )
+    exp._set_return_values_at((0, 1, 0), ret_values)
+    # Check that the return values are as expected
+    for key, value in ret_values.items():
+        # check that the key is in the data variables
+        assert key in exp.data.data_vars
+        # check that the value is correct
+        assert np.all(exp.data[key].values[0, 1, 0] == value)
+        # check that the other values are nan
+        assert np.all(exp.data[key].values[0, 0, 0] != value)
+
+@pytest.mark.parametrize(*("params, index, expected_kwargs", [
+    pytest.param({"a": [1, 2, 3, 4]},
+                 (0, ),
+                 {"a": 1},
+                 id="single parameter"),
+    pytest.param({"a": [1, 2], "b": [1.0], "c": [1.0 + 1j],
+                  "d": ["a"], "e": [True], "f": np.linspace(0, 1, 2)},
+                 (1, 0, 0, 0, 0, 1),
+                 {"a": 2, "b": 1.0, "c": 1.0 + 1j,
+                  "d": "a", "e": True, "f": 1.0},
+                 id="all types"),
+    pytest.param({"g": [MyObject(1)], "h": [1, "a", True]},
+                 (0, 1),
+                 {"g": MyObject(1), "h": "a"},
+                 id="objects"),
+]))
+def test_get_kwargs(params, index, expected_kwargs):
+    """Test the _get_kwargs function."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters=params,
+        return_values={},
+    )
+    # Get the kwargs
+    kwargs = exp._get_kwargs(index)
+    assert isinstance(kwargs, dict)
+    # Check that the kwargs are as expected
+    assert kwargs == expected_kwargs
+
+def test_get_kwargs_with_custom_arguments():
+    """Test the _get_kwargs function with custom arguments."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"a": [1, 2, 3, 4]},
+        return_values={},
+    )
+    exp.add_custom_argument("test", 1)
+    # Get the kwargs
+    kwargs = exp._get_kwargs((0, ))
+    assert isinstance(kwargs, dict)
+    # Check that the kwargs are as expected
+    assert kwargs == {"a": 1, "test": 1}
+    # test with uuid
+    exp.pass_uuid = True
+    kwargs = exp._get_kwargs((2, ))
+    assert isinstance(kwargs, dict)
+    # Check that the kwargs are as expected
+    assert kwargs == {"a": 3, "test": 1, "uuid": exp.uuid.values.flatten()[2]}
+
+def test_run_single():
+    """Test the _run_single function."""
+    # Define a simple function
+    def simple_func(x: int, y: MyObject) -> dict:
+        return {"addition": x + y.value, "product": MyObject(x * y.value)}
+
+    # Create the experiment
+    exp = SweepExp(
+        func=simple_func,
+        parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
+        return_values={"addition": int, "product": object},
+    )
+    # Run the experiment
+    exp._run_single((2, 0))
+    # Check that the status is as expected
+    assert exp.status.values[2, 0] == "C"
+    # Check that the return values are as expected
+    assert exp.data["addition"].values[2, 0] == 4  # noqa: PLR2004
+    assert exp.data["product"].values[2, 0] == MyObject(3)
+
+# ----------------------------------------------------------------
 #  Test the run function
 # ----------------------------------------------------------------
 
-def test_standard_run(): ...
+def test_standard_run():
+    # Define a simple function
+    def simple_func(x: int, y: MyObject) -> dict:
+        return {"addition": x + y.value, "product": MyObject(x * y.value)}
 
-def test_run_with_uuid(): ...
+    # Create the experiment
+    exp = SweepExp(
+        func=simple_func,
+        parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
+        return_values={"addition": float, "product": object},
+    )
+    # Check that the status is not started
+    assert (exp.status.values == "N").all()
+    # Run the experiment
+    exp.run()
+    # Check that the status is as expected
+    assert (exp.status.values == "C").all()
+    # Check that the return values are as expected
+    assert (exp.data["addition"].values == [[2, 3], [3, 4], [4, 5]]).all()
+    assert (exp.data["product"].values == [[MyObject(1), MyObject(2)],
+                                           [MyObject(2), MyObject(4)],
+                                           [MyObject(3), MyObject(6)]]).all()
 
-def test_run_with_timeit(): ...
+def test_run_with_uuid(temp_dir):
+    # Create a function that takes the uuis an an argument and write
+    # something to a file with the uuid in the name
+    def my_experiment(x: int, uuid: str) -> dict:
+        with Path.open(f"{temp_dir}/output_{uuid}.txt", "w") as file:
+            file.write(f"Experiment with x={x} and uuid={uuid}.")
+        return {}
 
-def test_run_with_priorities(): ...
+    sweep = SweepExp(
+        func=my_experiment,
+        parameters={"x": [1, 2, 3]},
+        return_values={},
+    )
 
-def test_run_with_failures(): ...
+    # Enable the uuid
+    sweep.pass_uuid = True
+    # Run the sweep
+    sweep.run()
+    # Check that the three files were created
+    for i in range(3):
+        uuid = sweep.uuid.values.flatten()[i]
+        assert (temp_dir / f"output_{uuid}.txt").exists()
+        with Path.open(f"{temp_dir}/output_{uuid}.txt", "r") as file:
+            assert file.read() == f"Experiment with x={i+1} and uuid={uuid}."
 
-def test_run_with_custom_arguments(): ...
+def test_run_with_timeit():
+    # define a function that takes some time
+    def slow_func(wait_time: float) -> dict:
+        time.sleep(wait_time)
+        return {}
+    # Create the experiment
+    exp = SweepExp(
+        func=slow_func,
+        parameters={"wait_time": [0.3, 0.6, 0.9]},
+        return_values={},
+    )
+    # Enable the timeit property
+    exp.timeit = True
+    # Run the experiment
+    exp.run()
+    # Check that the duration is not nan
+    assert not np.isnan(exp.duration.values).all()
+    # Check that the duration is as expected
+    tolerance = 0.1
+    assert np.allclose(exp.duration.values, [0.3, 0.6, 0.9], atol=tolerance)
+
+def test_run_with_failures():
+    def fail_func(should_fail: bool) -> dict:  # noqa: FBT001
+        if should_fail:
+            raise ValueError
+        return {}
+    # Create the experiment
+    exp = SweepExp(
+        func=fail_func,
+        parameters={"should_fail": [False, True]},
+        return_values={},
+    )
+    # Run the experiment
+    exp.run()
+    # Check that the status is as expected
+    assert (exp.status.values == [["C", "F"]]).all()
+
+def test_run_with_custom_arguments():
+    def custom_func(para1: int, custom: float) -> dict:
+        return {"res": para1 + custom}
+
+    # Create the experiment
+    exp = SweepExp(
+        func=custom_func,
+        parameters={"para1": [1, 2, 3]},
+        return_values={"res": float},
+    )
+
+    # Add a custom argument
+    exp.add_custom_argument("custom", 1.0)
+    # Set the custom argument
+    exp.data["custom"].data = np.array([1.0, 2.0, 3.0])
+    # Run the experiment
+    exp.run()
+    # Check that the status is as expected
+    assert (exp.status.values == "C").all()
+    # Check that the return values are as expected
+    assert (exp.data["res"].values == [2.0, 4.0, 6.0]).all()
+
+def test_run_with_auto_save(save_path):
+
+    exp = SweepExp(
+        func=lambda x: {"res": 2 * x},
+        parameters={"x": [1, 2, 3]},
+        return_values={"res": int},
+        save_path=save_path,
+    )
+    exp.auto_save = True
+
+    # modify the save method to check if it is called
+    exp.save = MagicMock(wraps=exp.save)
+    exp.run()
+    # check that the save method was called
+    assert exp.save.called
+    # check that the method was called three times
+    assert exp.save.call_count == len(exp.data["res"].values.flatten())

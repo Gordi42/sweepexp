@@ -1,9 +1,11 @@
 """Running parameter sweeps sequentially."""
 from __future__ import annotations
 
+import shutil
+import time
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
 
 import dill
@@ -17,10 +19,69 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 RESERVED_ARGUMENTS = {"uuid", "status", "duration", "priority"}
+POSSIBLE_STATUSES = {"N", "C", "F", "S"}
+SUPPORTED_EXTENSIONS = {".zarr", ".nc", ".cdf", ".pkl"}
 
 class SweepExp:
 
-    """Base class for the sweepexp experiment."""
+    """
+    Run a parameter sweep sequentially.
+
+    Parameters
+    ----------
+    func : Callable
+        The experiment function to run. The function should take the parameters
+        as keyword arguments and return a dictionary with the return values.
+    parameters : dict[str, list]
+        The parameters to sweep over. The keys are the parameter names and the
+        values are lists of the parameter values.
+    return_values : dict[str, type]
+        The return values of the experiment function. The keys are the return
+        value names and the values are the types of the return values.
+    save_path : Path | str | None
+        The path to save the results to. Supported file formats are: '.zarr',
+        '.nc', '.cdf', '.pkl'. The '.zarr' and '.nc' formats only support
+        numeric and boolean data. Only the '.pkl' format supports saving data
+        of any type.
+
+    Description
+    -----------
+    The SweepExp class can be used to run a custom experiment function with
+    different parameter combinations. The results of the experiments are saved
+    as an xarray dataset. The dataset can be saved to a file and loaded later
+    to continue the experiments. All parameter combinations are run
+    sequentially. For parallel execution, consider using the 'SweepExpParallel'
+    or 'SweepExpMPI' classes.
+
+    SweepExp supports the following additional features:
+    - Custom arguments: Add custom arguments to the experiment function.
+    - UUID: Pass a unique identifier to the experiment function.
+    - Auto save: Automatically save the results after each experiment.
+    - Timeit: Measure the duration of each experiment.
+    - Priorities: Run experiments with higher priority first.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        from sweepexp import SweepExp
+
+        # Create a simple experiment function
+        def my_experiment(x: int, y: float) -> dict:
+            return {"sum": x + y, "product": x * y}
+
+        # Initialize the SweepExp object
+        sweep = SweepExp(
+            func=my_experiment,
+            parameters={"x": [1, 2, 3], "y": [4, 5, 6]},
+            return_values={"sum": int},
+            save_path="my_data.zarr"
+        )
+
+        # Run the sweep
+        sweep.run()
+
+    """
 
     def __init__(self,
                  func: Callable,
@@ -58,11 +119,6 @@ class SweepExp:
         path_exists = self.save_path is not None and self.save_path.exists()
         self._data = self._load_data_from_file() if path_exists else self._create_data()
 
-    def run(self, **kwargs: any) -> None:
-        """Run all experiments with the status 'not started'."""
-        # TODO(Silvano): Add content
-        raise NotImplementedError
-
     def add_custom_argument(self, name: str, default_value: any) -> None:
         """
         Add custom arguments to the experiment function.
@@ -73,6 +129,30 @@ class SweepExp:
             The name of the argument.
         default_value : any
             The default value of the argument.
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            from sweepexp import SweepExp
+
+            # Create a function that takes a custom argument
+            def my_experiment(param1: int, custom: float) -> dict:
+                return {"product": param1 * custom}
+
+            sweep = SweepExp(
+                func=my_experiment,
+                parameters={"param1": [1, 2, 3]},
+                return_values={"product": int},
+            )
+
+            # Add a custom argument
+            sweep.add_custom_argument("custom", 2.0)
+            # Set the custom argument to 3.0 for the second experiment
+            sweep.data["custom"].data[1] = 3.0
+            # Run the sweep
+            sweep.run()
 
         """
         # check that the name is not reserved
@@ -94,6 +174,113 @@ class SweepExp:
             data=np.full(self.shape, default_value),
             dims=self.parameters.keys(),
         )
+
+    # ================================================================
+    #  Running experiments
+    # ================================================================
+    def run(self, status: str | list[str] | None = "N") -> None:
+        """
+        Run all experiments with the status 'N' (not started).
+
+        Parameters
+        ----------
+        status : str | list[str] | None
+            The status of the experiments to run. If None, all experiments with
+            status 'N' (not started) are run.
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            from sweepexp import SweepExp
+            sweep = SweepExp(...)  # Initialize the sweep
+
+            # Run all experiments with status 'N'
+            sweep.run()
+
+            # Run all experiments with status 'C'
+            sweep.run("C")
+
+            # Run all experiments with status 'S' and 'F'
+            sweep.run(["S", "F"])
+
+        """
+        # Create a list of all experiments that need to be run
+        indices = self._get_indices(status)
+        number_of_experiments = len(indices[0])
+        log.info(f"Found {number_of_experiments} experiments to run.")
+        # Sort the experiments based on the priorities
+        indices = self._sort_indices(indices)
+        # Run all experiments
+        for index in zip(*indices, strict=False):
+            # log how many experiments are left
+            log.debug(f"{number_of_experiments} experiments left.")
+            number_of_experiments -= 1
+            self._run_single(index)
+            if self.auto_save:
+                self.save(mode="w")
+
+    def _get_indices(self, status: str | list[str] | None) -> np.ndarray:
+        """Get the indices of the experiments that match the given status."""
+        status = status or list(POSSIBLE_STATUSES)
+        if isinstance(status, str):
+            status = [status]
+
+        # Get the indices of the experiments with the given status
+        return np.argwhere(np.isin(self.status.data, status)).T
+
+    def _sort_indices(self, indices: np.ndarray) -> np.ndarray:
+        """Sort the indices based on the priorities."""
+        if not self.enable_priorities:
+            return indices
+        # Get the priorities of the experiments
+        priorities = self.priority.data[*indices]
+        # Sort the indices based on the priorities
+        return indices.T[np.argsort(priorities)].T
+
+    def _get_kwargs(self, index: tuple[int]) -> dict[str, any]:
+        """Get the keyword arguments for the experiment at the given index."""
+        # Get the values of the parameters at the given index
+        kwargs = {name: self.data[name].data[ind]
+                  for name, ind in zip(self.parameters, index, strict=True)}
+        # Get the custom arguments
+        kwargs.update({name: self.data[name].data[index]
+                       for name in self.custom_arguments})
+        return kwargs
+
+    def _run_single(self, index: tuple[int]) -> None:
+        """Run the experiment at the given index."""
+        kwargs = self._get_kwargs(index)
+        log.debug(f"Running experiment with kwargs: {kwargs}")
+        if self.timeit:
+            start_time = time.time()
+        try:
+            return_values = self.func(**kwargs)
+            status = "C"
+        except Exception as error:  # noqa: BLE001
+            log.error(f"Error in experiment {index}: {error}")
+            return_values = {}
+            status = "F"
+
+        self._set_status_at(index, status)
+        self._set_return_values_at(index, return_values)
+
+        if self.timeit:
+            duration = time.time() - start_time
+            self._set_duration_at(index, duration)
+            log.debug(f"Experiment took {duration:.2f} seconds.")
+
+    def _set_return_values_at(self,
+                              index: tuple[int],
+                              return_values: dict[str, any]) -> None:
+        """Set the return values of the experiment at the given index."""
+        for name, value in return_values.items():
+            self.data[name].data[index] = value
+
+    def _set_duration_at(self, index: tuple[int], duration: float) -> None:
+        """Set the duration of the experiment at the given index."""
+        self.duration.data[index] = duration
 
     # ================================================================
     #  Data handling
@@ -171,11 +358,27 @@ class SweepExp:
         # Check if the return types are the same
         return data
 
-    def save(self) -> None:
-        """Save the xarray dataset to the save path."""
+    def save(self, mode: Literal["x", "w"] = "x") -> None:
+        """
+        Save the xarray dataset to the save path.
+
+        Parameters
+        ----------
+        mode : Literal["x", "w"] (default="x")
+            What to do if there is already data at the save path.
+            If "x", raise a FileExistsError. If "w", overwrite the data.
+
+        """
         if self.save_path is None:
             msg = "The save path is not set. Set the save path before saving."
             raise ValueError(msg)
+
+        if mode == "w":
+            self._remove_existing_data()
+        elif mode == "x" and self.save_path.exists():
+                msg = "There is already data at the save path. "
+                msg += "Use the 'mode=overwrite' argument to overwrite the data."
+                raise FileExistsError(msg)
 
         # if the extension is zarr, save the data to zarr:
         if self.save_path.suffix == ".zarr":
@@ -195,12 +398,46 @@ class SweepExp:
                 dill.dump(self.data, file)
             return
         msg = "The file extension is not supported."
-        msg += " Supported extensions are: '.zarr', '.nc', '.cdf', '.pkl'."
+        msg += f" Supported extensions are: {SUPPORTED_EXTENSIONS}."
         raise ValueError(msg)
 
     @staticmethod
     def load(save_path: Path | str) -> xr.DataArray:
-        """Load the xarray dataset from a file."""
+        """
+        Load the xarray dataset from a file.
+
+        Parameters
+        ----------
+        save_path : Path | str
+            The path to the file to load the data from.
+            Must have one of the following extensions: '.zarr', '.nc', '.cdf', '.pkl'.
+
+        Returns
+        -------
+        data : xr.DataArray
+            The xarray dataset with the data.
+
+        .. note::
+            Not the SweepExp object is returned, but only the data.
+
+        Examples
+        --------
+        .. code-block:: python
+
+            # Create a SweepExp object
+            sweep = SweepExp(
+                func=lambda x: {"y": x},
+                parameters={"x": [1, 2, 3]},
+                return_values={"y": int},
+                save_path="my_data.zarr"
+            )
+            # Run the sweep and save it
+            sweep.run()
+            sweep.save()
+            # Load the data from the file
+            df = SweepExp.load("my_data.zarr")
+
+        """
         save_path = Path(save_path)
         # if the extension is zarr, load the data from zarr:
         if save_path.suffix == ".zarr":
@@ -216,8 +453,20 @@ class SweepExp:
             with Path.open(save_path, "rb") as file:
                 return dill.load(file)  # noqa: S301
         msg = "The file extension is not supported."
-        msg += " Supported extensions are: '.zarr', '.nc', '.cdf', '.pkl'."
+        msg += f" Supported extensions are: {SUPPORTED_EXTENSIONS}."
         raise ValueError(msg)
+
+    def _remove_existing_data(self) -> None:
+        """Remove the existing data at the save path."""
+        if self.save_path is None:
+            return
+        if not self.save_path.exists():
+            return
+        if self.save_path.suffix == ".zarr":
+            # zarr files are directories, so we need to remove the directory
+            shutil.rmtree(self.save_path)
+            return
+        self.save_path.unlink()
 
     # ================================================================
     #  Status handling
@@ -270,7 +519,11 @@ class SweepExp:
         # Get the indices of the experiments with the old status
         indices = np.where(self.status == old_status)
         # Set the status of the experiments to the new status
-        self.status.data[indices] = new_status
+        self._set_status_at(indices, new_status)
+
+    def _set_status_at(self, index: tuple[int], status: str) -> None:
+        """Set the status of the experiment at the given index."""
+        self.status.data[index] = status
 
     # ================================================================
     #  Conversion functions
@@ -337,7 +590,41 @@ class SweepExp:
 
     @property
     def pass_uuid(self) -> bool:
-        """Whether to pass the uuid to the experiment function."""
+        """
+        Whether to pass the uuid to the experiment function.
+
+        Description
+        -----------
+        When the pass_uuid property is set to True, a uuid (unique identifier)
+        will be assigned to each experiment. This uuid is passed to the experiment
+        function as an argument. Make sure to add a uuid argument to the function.
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            from sweepexp import SweepExp
+
+            # Create a function that takes the uuis an an argument and write
+            # something to a file with the uuid in the name
+            def my_experiment(x: int, uuid: str) -> dict:
+                with open(f"output_{uuid}.txt", "w") as file:
+                    file.write(f"Experiment with x={x} and uuid={uuid}.")
+                return {}
+
+            sweep = SweepExp(
+                func=my_experiment,
+                parameters={"x": [1, 2, 3]},
+                return_values={},
+            )
+
+            # Enable the uuid
+            sweep.pass_uuid = True
+            # Run the sweep
+            sweep.run()
+
+        """
         return self._pass_uuid
 
     @pass_uuid.setter
@@ -374,7 +661,15 @@ class SweepExp:
 
     @property
     def timeit(self) -> bool:
-        """Whether to measure the duration of each experiment."""
+        """
+        Whether to measure the duration of each experiment.
+
+        Description
+        -----------
+        When the timeit property is set to True, a new variable 'duration' is
+        added to the data. This variable stores the duration of each experiment
+        in seconds.
+        """
         return self._timeit
 
     @timeit.setter
@@ -438,9 +733,14 @@ class SweepExp:
         Description
         -----------
         The uuid is a string that uniquely identifies each experiment. By default,
-        uuids are disbabled to save memory. To enable them, set 'pass_uuid' to
-        True. When enabled, the experiment function will receive the uuid as an
-        argument. So make sure to add a uuid argument to the function signature.
+        uuids are disbabled to save memory. They can be enabled by setting the
+        'pass_uuid' property to True:
+
+        .. code-block:: python
+
+            sweep = SweepExp(...)
+            sweep.pass_uuid = True
+
         """
         # check if uuid is enabled
         if not self.pass_uuid:
@@ -465,7 +765,21 @@ class SweepExp:
 
     @property
     def duration(self) -> xr.DataArray:
-        """The duration of each experiment."""
+        """
+        The duration of each experiment.
+
+        Description
+        -----------
+        The duration is the time it took to run the experiment with the given
+        parameter combination. The duration is only available if the 'timeit'
+        property is set to True. Make sure to enable it with:
+
+        .. code-block:: python
+
+            sweep = SweepExp(...)
+            sweep.timeit = True
+
+        """
         # check if timeit is enabled
         if not self.timeit:
             msg = "Timeit is disabled. "
@@ -475,7 +789,21 @@ class SweepExp:
 
     @property
     def priority(self) -> xr.DataArray:
-        """The priority of each experiment."""
+        """
+        The priority of each experiment.
+
+        Description
+        -----------
+        The priority is an integer that determines the order in which the
+        experiments are run. Experiments with higher priority are run first.
+        Make sure to enable the priorities before accessing them with:
+
+        .. code-block:: python
+
+            sweep = SweepExp(...)
+            sweep.enable_priorities = True
+
+        """
         # check if priorities are enabled
         if not self.enable_priorities:
             msg = "Priorities are disabled. "
