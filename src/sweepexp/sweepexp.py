@@ -235,7 +235,7 @@ class SweepExp:
         if not self.enable_priorities:
             return indices
         # Get the priorities of the experiments
-        priorities = self.priority.data[*indices]
+        priorities = self.priority.data[tuple(indices)]
         # Sort the indices based on the priorities
         return indices.T[np.argsort(priorities)].T
 
