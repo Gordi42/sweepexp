@@ -38,20 +38,28 @@ jobs:
 
     - name: Run the tests
       run: |
-        mpiexec -n 3 bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --with-mpi --junitxml=junit.xml -o junit_family=legacy tests/test_sweepexp_mpi.py'
+        # only run the coverage test with openmpi
+        if [ "${{ matrix.mpi }}" = "openmpi" ]; then
+            mpiexec -n 3 bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --with-mpi --junitxml=junit.xml -o junit_family=legacy tests/test_sweepexp_mpi.py'
+        else
+            mpiexec -n 3 pytest --with-mpi tests/test_sweepexp_mpi.py
+        fi
 
     - name: Combine coverage reports
       run: |
-        coverage combine
+        if [ "${{ matrix.mpi }}" = "openmpi" ]; then
+            coverage combine
+        fi
 
     - name: Upload test results
-      if: ${{ !cancelled() }}
+      if: ${{ !cancelled() }} && ${{ matrix.mpi == 'openmpi' }}
       uses: codecov/test-results-action@v1
       with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: mpi
 
     - name: Upload coverage reports to Codecov
+      if: ${{ matrix.mpi == 'openmpi' }}
       uses: codecov/codecov-action@v5
       with:
           token: ${{ secrets.CODECOV_TOKEN }}

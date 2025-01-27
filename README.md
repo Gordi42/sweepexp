@@ -1,4 +1,4 @@
-![tests](https://github.com/Gordi42/sweepexp/.github/workflows/test.yml/badge.svg)
+![tests](https://github.com/Gordi42/sweepexp/actions/workflows/test.yml/badge.svg)
 [![codecov](https://codecov.io/github/Gordi42/sweepexp/graph/badge.svg?token=SHVDIIOL8Y)](https://codecov.io/github/Gordi42/sweepexp)
 # SweepExp
 
