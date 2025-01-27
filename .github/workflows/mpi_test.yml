@@ -38,4 +38,21 @@ jobs:
 
     - name: Run the tests
       run: |
-        mpiexec -n 2 pytest --with-mpi tests/test_sweepexp_mpi.py
+        mpirun -n 3 bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --junitxml=junit.xml -o junit_family=legacy .'
+
+    - name: Combine coverage reports
+      run: |
+        coverage combine
+
+    - name: Upload test results
+      if: ${{ !cancelled() }}
+      uses: codecov/test-results-action@v1
+      with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: mpi
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: mpi
