@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import time
+from typing import TYPE_CHECKING
 
 from sweepexp import SweepExp, log
+
+if TYPE_CHECKING:
+    import xarray as xr
 
 WAIT_TIME = 0.05  # 50 ms
 
@@ -72,7 +76,7 @@ class SweepExpParallel(SweepExp):
     def run(self,
             status: str | list[str] | None = "N",
             max_workers: int | None = None,
-            ) -> None:
+            ) -> xr.Dataset:
         """
         Run all experiments with the status 'N' (not started).
 
@@ -84,6 +88,11 @@ class SweepExpParallel(SweepExp):
         max_workers : int | None
             The maximum number of workers to run in parallel. If None, the
             number of workers is set to the number of CPUs available.
+
+        Returns
+        -------
+        xr.Dataset
+            The results of the experiments as an xarray dataset
 
         Examples
         --------
@@ -124,6 +133,7 @@ class SweepExpParallel(SweepExp):
                      for index in zip(*indices, strict=True)]
 
         self._run_jobs(jobs, max_workers)
+        return self.data
 
     def _run_jobs(self, jobs: list[dict[str, any]], max_workers: int) -> None:
         """Run the list of processes in parallel."""

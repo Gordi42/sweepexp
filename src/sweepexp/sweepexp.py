@@ -177,7 +177,7 @@ class SweepExp:
     # ================================================================
     #  Running experiments
     # ================================================================
-    def run(self, status: str | list[str] | None = "N") -> None:
+    def run(self, status: str | list[str] | None = "N") -> xr.Dataset:
         """
         Run all experiments with the status 'N' (not started).
 
@@ -186,6 +186,11 @@ class SweepExp:
         status : str | list[str] | None
             The status of the experiments to run. If None, all experiments with
             status 'N' (not started) are run.
+
+        Returns
+        -------
+        xr.Dataset
+            The xarray dataset with the results of the experiments.
 
         Examples
         --------
@@ -217,6 +222,8 @@ class SweepExp:
             log.debug(f"{number_of_experiments} experiments left.")
             number_of_experiments -= 1
             self._run_single(index)
+
+        return self.data
 
     def _get_indices(self, status: str | list[str] | None) -> np.ndarray:
         """Get the indices of the experiments that match the given status."""
