@@ -200,7 +200,8 @@ class SweepExpParallel(SweepExp):
 
     def _set_experiment_function(self) -> None:
         """Wrap the experiment function to be run in a separate process."""
-        def wrapper(kwargs: dict[str, any], queue: mp.Queue) -> None:
+        def wrapper(kwargs: dict[str, any],  # pragma: no cover
+                    queue: mp.Queue) -> None:
             log.debug(f"Running experiment with kwargs: {kwargs}")
             # Save the start time if timeit is enabled
             if self.timeit:
