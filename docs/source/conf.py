@@ -56,26 +56,10 @@ if not quick_build:
     extensions += [
         'sphinx.ext.autodoc',
         'sphinx.ext.autosummary',
-        'sphinx_gallery.gen_gallery',
         'sphinx_codeautolink',
     ]
 
 
-
-sphinx_gallery_conf = {
-    'examples_dirs': '../../examples',   # path to your example scripts
-    'gallery_dirs': 'auto_examples',  # path to where to save gallery generated output
-    'download_all_examples': False,
-    'plot_gallery': 'True',
-    'remove_config_comments': True,  # Removes comments from the config block
-    'filename_pattern': '/',
-    'image_scrapers': (copy_media_files),
-    'show_signature': False,
-    "notebook_extensions": {},
-    'backreferences_dir'  : 'gen_modules/backreferences',
-    'doc_module'          : ('sweepexp', ),
-    'only_warn_on_example_error': True
-}
 
 autodoc_default_options = {
     'members': True,
@@ -111,6 +95,7 @@ html_css_files = [
 
 html_static_path = ['_static']
 autodoc_mock_imports = pyproject["project"]["dependencies"]
+autodoc_mock_imports += ["mpi4py"]
 
 # default_role = 'literal'
 # MyST configuration

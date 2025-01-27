@@ -117,9 +117,6 @@ Module: :py:mod:`{{ fullname }}`
 
    .. _sphx_glr_backref_{{fullname | shorten}}.{{item}}:
 
-   .. minigallery:: {{fullname | shorten}}.{{item}}
-
-      :add-heading:
 {%- endfor %}
 {% endif %}
 {% endblock %}
@@ -137,8 +134,6 @@ Module: :py:mod:`{{ fullname }}`
    {{ item }}
 
    .. _sphx_glr_backref_{{fullname | shorten}}.{{item}}:
-
-   .. minigallery:: {{fullname | shorten}}.{{item}}
 
 {%- endfor %}
 {% endif %}

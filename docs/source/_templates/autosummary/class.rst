@@ -29,6 +29,3 @@
    {% endif %}
    {% endblock %}
 
-   .. minigallery:: {{fullname | shorten }}
-      :add-heading:
-

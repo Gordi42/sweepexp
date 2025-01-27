@@ -4,7 +4,6 @@ tomli
 sphinx-book-theme
 sphinx-copybutton
 sphinx-design
-sphinx_gallery
 sphinxcontrib-youtube
 sphinxcontrib-video
 sphinx-codeautolink
