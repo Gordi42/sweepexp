@@ -38,7 +38,7 @@ jobs:
 
     - name: Run the tests
       run: |
-        mpiexec -n 3 bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --junitxml=junit.xml -o junit_family=legacy tests/test_sweepexp_mpi.py'
+        mpiexec -n 3 bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --with-mpi --junitxml=junit.xml -o junit_family=legacy tests/test_sweepexp_mpi.py'
 
     - name: Combine coverage reports
       run: |
