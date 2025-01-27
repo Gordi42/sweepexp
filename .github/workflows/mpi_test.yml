@@ -1,0 +1,40 @@
+# This workflow will run the mpi tests on every push and pull request to the repository.
+
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install OpenMPI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mpi4py
+        pip install pytest coverage pytest-cov pytest-mpi
+
+    - name: Install the base package
+      run: |
+        pip install -e .[full]
+
+    - name: Run the tests
+      run: |
+        mpirun -n 4 pytest --with-mpi tests/test_sweepexp_mpi.py
