@@ -6,7 +6,7 @@ SweepExp
    :hidden:
 
    installation
-   usage
+   usage/index
    package_api
 
 Features
@@ -29,7 +29,7 @@ Navigation
       How to install.
 
    .. grid-item-card::  Usage
-      :link: usage
+      :link: usage/index
       :link-type: doc
 
       How to use.

@@ -8,7 +8,7 @@ from mpi4py import MPI
 
 from sweepexp import SweepExp, log
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import xarray as xr
 
 MAIN_RANK = 0

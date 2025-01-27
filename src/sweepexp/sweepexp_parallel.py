@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from sweepexp import SweepExp, log
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import xarray as xr
 
 WAIT_TIME = 0.05  # 50 ms

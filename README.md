@@ -1,5 +1,9 @@
+![Read the Docs](https://img.shields.io/readthedocs/sweepexp)
 ![tests](https://github.com/Gordi42/sweepexp/actions/workflows/test.yml/badge.svg)
 [![codecov](https://codecov.io/github/Gordi42/sweepexp/graph/badge.svg?token=SHVDIIOL8Y)](https://codecov.io/github/Gordi42/sweepexp)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+![GitHub License](https://img.shields.io/github/license/Gordi42/sweepexp)
+
 # SweepExp
 
 A python package for running parallel experiments across parameter grids with MPI.

@@ -1,6 +1,19 @@
 Usage
 =====
 
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   status
+   saving
+   custom_input_arguments
+   uuid
+   timeit
+   mpi
+   priorities
+
+
 Let's say we have a function that depends on multiple parameters:
 
 .. code-block:: python
