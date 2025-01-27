@@ -9,6 +9,8 @@ from mpi4py import MPI
 from sweepexp import SweepExp, log
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import xarray as xr
 
 MAIN_RANK = 0
@@ -20,7 +22,7 @@ class SweepExpMPI(SweepExp):
 
     """Running the experiments in parallel using mpi."""
 
-    # Override save methods
+    # Override save and load methods to only save and load on the main rank
     def save(self, mode: Literal["x", "w"] = "x") -> None:  # noqa: D102
         if IS_MAIN_RANK:
             super().save(mode=mode)

@@ -317,7 +317,7 @@ class SweepExp:
         }
         return data
 
-    def _load_data_from_file(self) -> None:
+    def _load_data_from_file(self) -> xr.DataArray:
         """Load the xarray dataset from a file."""
         log.info(f"Foud data at {self.save_path}. Loading data.")
         data = self.load(self.save_path)
