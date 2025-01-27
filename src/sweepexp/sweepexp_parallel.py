@@ -37,7 +37,7 @@ class SweepExpParallel(SweepExp):
 
     Description
     -----------
-    The SweepExp class can be used to run a custom experiment function with
+    The SweepExpParallel class can be used to run a custom experiment function with
     different parameter combinations. The results of the experiments are saved
     as an xarray dataset. The dataset can be saved to a file and loaded later
     to continue the experiments. All parameter combinations are run

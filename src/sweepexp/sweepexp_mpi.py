@@ -18,7 +18,72 @@ WAIT_TIME = 0.05  # 50 ms
 
 class SweepExpMPI(SweepExp):
 
-    """Running the experiments in parallel using mpi."""
+    """
+    Run a parameter sweep in parallel using MPI.
+
+    Parameters
+    ----------
+    func : Callable
+        The experiment function to run. The function should take the parameters
+        as keyword arguments and return a dictionary with the return values.
+    parameters : dict[str, list]
+        The parameters to sweep over. The keys are the parameter names and the
+        values are lists of the parameter values.
+    return_values : dict[str, type]
+        The return values of the experiment function. The keys are the return
+        value names and the values are the types of the return values.
+    save_path : Path | str | None
+        The path to save the results to. Supported file formats are: '.zarr',
+        '.nc', '.cdf', '.pkl'. The '.zarr' and '.nc' formats only support
+        numeric and boolean data. Only the '.pkl' format supports saving data
+        of any type.
+
+    Description
+    -----------
+    The SweepExpMPI class can be used to run a custom experiment function with
+    different parameter combinations. The results of the experiments are saved
+    as an xarray dataset. The dataset can be saved to a file and loaded later
+    to continue the experiments. All parameter combinations are run
+    in parallel using mpi4py.
+
+    SweepExp supports the following additional features:
+    - Custom arguments: Add custom arguments to the experiment function.
+    - UUID: Pass a unique identifier to the experiment function.
+    - Auto save: Automatically save the results after each experiment.
+    - Timeit: Measure the duration of each experiment.
+    - Priorities: Run experiments with higher priority first.
+
+    Examples
+    --------
+
+    .. code-block:: python
+        :caption: my_experiment.py
+
+        from sweepexp import SweepExpParallel
+
+        # Create a simple experiment function
+        def my_experiment(x: int, y: float) -> dict:
+            return {"sum": x + y, "product": x * y}
+
+        # Initialize the SweepExp object
+        sweep = SweepExpParallel(
+            func=my_experiment,
+            parameters={"x": [1, 2, 3], "y": [4, 5, 6]},
+            return_values={"sum": int},
+        )
+
+        # Run the sweep
+        sweep.run()
+
+    To run the experiment on 4 CPUs using MPI, use the following command:
+
+    .. code-block:: bash
+
+        mpiexec -n 4 python3 my_experiment.py
+
+    Or, alternatively any other MPI launcher, e.g., `mpirun`, `srun`, etc.
+
+    """
 
     # Override save and load methods to only save and load on the main rank
     def save(self, mode: Literal["x", "w"] = "x") -> None:  # noqa: D102

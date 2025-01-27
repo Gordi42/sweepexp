@@ -1,6 +1,6 @@
 # This workflow will run the mpi tests on every push and pull request to the repository.
 
-name: Tests
+name: MPI-Tests
 
 on: [push, pull_request]
 
@@ -38,7 +38,7 @@ jobs:
 
     - name: Run the tests
       run: |
-        mpirun -n 3 bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --junitxml=junit.xml -o junit_family=legacy .'
+        mpiexec -n 3 bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --junitxml=junit.xml -o junit_family=legacy tests/test_sweepexp_mpi.py'
 
     - name: Combine coverage reports
       run: |
