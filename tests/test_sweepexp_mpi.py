@@ -3,33 +3,30 @@ Test the SweepExpParallel class.
 
 Description
 -----------
-This test should be run with mpi and 4 CPUs available. For example with srun:
+This test should be run with mpi. For example with srun:
 
 .. code-block:: bash
 
-    srun -n 4 pytest tests/test_sweepexp_mpi.py
+    srun -n 2 pytest tests/test_sweepexp_mpi.py
 
 Or with mpirun:
 
 .. code-block:: bash
 
-    mpirun -n 4 pytest tests/test_sweepexp_mpi.py
+    mpirun -n 2 pytest tests/test_sweepexp_mpi.py
 
 """
-
 from __future__ import annotations
 
 import pytest
-from mpi4py import MPI
 
 # Try to import mpi4py and SweetExpMPI
 try:
     from mpi4py import MPI
-
-    from sweepexp import SweepExpMPI
 except ImportError:
-    MPI = None
-    SweepExpMPI = None
+    # Skip the test if mpi4py is not available
+    pytest.skip("mpi4py is not available", allow_module_level=True)
+
 
 # ================================================================
 #  Helpers
@@ -55,9 +52,9 @@ def save_path(temp_dir, request):
 #  Tests
 # ================================================================
 
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=2)
 def test_mpi_world_size():
     """Test the number of ranks."""
     size = MPI.COMM_WORLD.Get_size()
-    expected_size = 4
-    assert size == expected_size
+    min_size = 2
+    assert size >= min_size
