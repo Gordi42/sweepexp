@@ -75,7 +75,6 @@ class SweepExp:
             func=my_experiment,
             parameters={"x": [1, 2, 3], "y": [4, 5, 6]},
             return_values={"sum": int},
-            save_path="my_data.zarr"
         )
 
         # Run the sweep
@@ -218,8 +217,6 @@ class SweepExp:
             log.debug(f"{number_of_experiments} experiments left.")
             number_of_experiments -= 1
             self._run_single(index)
-            if self.auto_save:
-                self.save(mode="w")
 
     def _get_indices(self, status: str | list[str] | None) -> np.ndarray:
         """Get the indices of the experiments that match the given status."""
@@ -259,7 +256,7 @@ class SweepExp:
             return_values = self.func(**kwargs)
             status = "C"
         except Exception as error:  # noqa: BLE001
-            log.error(f"Error in experiment {index}: {error}")
+            log.error(f"Error in experiment {self._get_kwargs(index)}: {error}")
             return_values = {}
             status = "F"
 
@@ -270,6 +267,9 @@ class SweepExp:
             duration = time.time() - start_time
             self._set_duration_at(index, duration)
             log.debug(f"Experiment took {duration:.2f} seconds.")
+
+        if self.auto_save:
+            self.save(mode="w")
 
     def _set_return_values_at(self,
                               index: tuple[int],

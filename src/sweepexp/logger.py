@@ -11,7 +11,7 @@ c_handler: logging.StreamHandler = logging.StreamHandler()
 
 # Create formatters and add it to handlers
 c_format: logging.Formatter = logging.Formatter(
-    "%(asctime)s - %(levelname)s - %(message)s",
+    "%(levelname)s - %(message)s",
 )
 c_handler.setFormatter(c_format)
 
