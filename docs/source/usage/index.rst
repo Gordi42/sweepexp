@@ -24,6 +24,7 @@ The first step is to define the custom function that you want to evaluate for
 different parameter combinations. Here's an example function:
 
 .. code-block::
+
     def my_custom_experiment(x: float, y: float) -> dict:
         """Add and multiply two numbers."""
         return {"addition": x + y, "multiplication": x * y}

@@ -27,7 +27,8 @@ This scenario is visualized in Figure 1.
    :width: 60%
    :align: center
    :alt: Non-optimal execution order
-   :caption: Figure 1: Non-optimal execution order
+
+   Figure 1: Non-optimal execution order
 
 Case 2: Optimal Order
 ~~~~~~~~~~~~~~~~~~~~~
@@ -43,7 +44,8 @@ This is the optimal way to schedule the experiments, as shown in Figure 2.
    :width: 60%
    :align: center
    :alt: Optimal execution order
-   :caption: Figure 2: Optimal execution order
+
+   Figure 2: Optimal execution order
 
 Rule of Thumb: Execute Longest Experiments First
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -17,8 +17,6 @@ detailed debug information by setting the logging level to "DEBUG":
 
     def my_custom_experiment(x: float, y: float) -> dict:
         """Add and multiply two numbers."""
-        # Potentially long expensive computation here
-        # We just add and multiply two numbers as an example
         return {"addition": x + y, "multiplication": x * y}
 
     sweep = SweepExp(
@@ -32,6 +30,7 @@ detailed debug information by setting the logging level to "DEBUG":
 with output:
 
 .. code-block::
+
     INFO - Found 6 experiments to run.
     DEBUG - 6 experiments left.
     DEBUG - Running experiment with kwargs: {'x': np.int64(1), 'y': np.int64(3)}

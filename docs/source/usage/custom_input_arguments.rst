@@ -15,10 +15,12 @@ with add_custom_argument() and have a default value (shared across all
 experiments). After adding the custom argument, you can modify its values in the
 data attribute to assign unique values for each parameter combination.
 
-Here’s how you can use this feature:
+Here's how you can use this feature:
 
 1: **Add the Custom Argument**: Use `add_custom_argument()` to introduce the new argument and define a default value.
+
 2: **Customize the Argument for Each Experiment** Modify the argument values in the data attribute to assign unique values for each grid point.
+
 3: **Run the Experiment**: The custom argument will automatically be passed to the function for each parameter combination.
 
 Example
