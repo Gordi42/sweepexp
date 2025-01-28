@@ -665,7 +665,7 @@ def test_get_indices(status, expepcted_indices):
 
 @pytest.mark.parametrize(*("with_priorities, expected_indices, first_kw", [
     pytest.param(True,
-                 np.array([[0, 1, 0], [0, 0, 1], [0, 2, 0]]),
+                 np.array([[0, 2, 0], [0, 0, 1], [0, 1, 0]]),
                  {"x": 1.0, "y": "b", "z": 1},
                  id="with priorities"),
     pytest.param(False,
