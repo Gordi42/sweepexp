@@ -1,5 +1,5 @@
-Adding Custom Arguments
-=======================
+Adding Custom Input Arguments
+=============================
 When running parameter sweep experiments, some settings or configurations may
 not logically belong to the parameter grid but still need to vary between
 experiments. For example, you might want to specify unique filenames for saving

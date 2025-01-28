@@ -80,7 +80,7 @@ pygments_style = 'sphinx'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_book_theme"
-# html_logo = "_static/logo_bright.png"
+html_logo = "_static/sweepexp_logo.svg"
 html_theme_options = {
     "repository_url": "https://github.com/Gordi42/sweepexp",
     "use_repository_button": True

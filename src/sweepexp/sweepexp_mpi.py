@@ -140,6 +140,8 @@ class SweepExpMPI(SweepExp):
                 self._handle_finished_job(index, result)
                 free_workers.append(worker)
                 active_jobs.remove((worker, index))
+                # log the number of remaining jobs
+                log.debug(f"Number of remaining jobs: {len(jobs) + len(active_jobs)}")
 
             # Sleep for a short time to prevent busy waiting
             if ( (jobs and not free_workers) or
@@ -184,7 +186,7 @@ class SweepExpMPI(SweepExp):
 
     def _run_experiment(self, kwargs: dict[str: any]) -> tuple:
         """Run a single experiment."""
-        log.debug(f"Rank {MY_RANK} - Running experiment with kwargs: {kwargs}")
+        log.debug(f"Rank {MY_RANK} - Start experiment with kwargs: {kwargs}")
         if self.timeit:
             start_time = time.time()
 
@@ -198,5 +200,7 @@ class SweepExpMPI(SweepExp):
 
         # Calculate the duration of the experiment
         duration = time.time() - start_time if self.timeit else 0
+
+        log.debug(f"Rank {MY_RANK} - Finished experiment with kwargs: {kwargs}")
 
         return return_values, status, duration

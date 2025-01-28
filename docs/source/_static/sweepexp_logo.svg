@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   id="svg5"
+   version="1.1"
+   viewBox="0 0 60 20"
+   height="20mm"
+   width="60mm"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="sweepexp_logo.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.6017536"
+     inkscape:cx="123.92667"
+     inkscape:cy="61.182942"
+     inkscape:window-width="1920"
+     inkscape:window-height="1170"
+     inkscape:window-x="1920"
+     inkscape:window-y="30"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-36.767454,-98.301192)">
+    <text
+       xml:space="preserve"
+       style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:10.5833px;line-height:1.25;font-family:'Noto Sans Osage';-inkscape-font-specification:'Noto Sans Osage Bold Italic';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="41.388279"
+       y="111.36602"
+       id="text2300"><tspan
+         sodipodi:role="line"
+         id="tspan2298"
+         style="font-style:italic;font-variant:normal;font-weight:800;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans Ultra-Bold Italic';fill:#5fbcd3;stroke-width:0.264583"
+         x="41.388279"
+         y="111.36602"><tspan
+   style="fill:#2c89a0"
+   id="tspan156590">Sweep</tspan>Exp</tspan></text>
+  </g>
+</svg>

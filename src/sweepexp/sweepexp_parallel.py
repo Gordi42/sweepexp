@@ -156,6 +156,7 @@ class SweepExpParallel(SweepExp):
                     continue
                 self._handle_finished_job(job)
                 active_jobs.remove(job)
+                log.debug(f"Number of remaining jobs: {len(jobs) + len(active_jobs)}")
 
             # Sleep if there are processes left but we can't start new ones
             if ( (jobs and len(active_jobs) >= max_workers) or
@@ -212,7 +213,7 @@ class SweepExpParallel(SweepExp):
         """Wrap the experiment function to be run in a separate process."""
         def wrapper(kwargs: dict[str, any],  # pragma: no cover
                     queue: mp.Queue) -> None:
-            log.debug(f"Running experiment with kwargs: {kwargs}")
+            log.debug(f"Start experiment with kwargs: {kwargs}")
             # Save the start time if timeit is enabled
             if self.timeit:
                 start_time = time.time()
@@ -230,4 +231,5 @@ class SweepExpParallel(SweepExp):
 
             # Put the return values in the queue
             queue.put(return_values)
+            log.debug(f"Finished experiment with kwargs: {kwargs}")
         self._exp_func = wrapper

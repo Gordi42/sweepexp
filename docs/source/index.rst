@@ -11,7 +11,7 @@ SweepExp
 
 Features
 --------
-- **Flexible Experimentation with Parameter Grids:** SweepExp simplifies running experiments over a grid of parameter combinations. Results are efficiently stored in zarr format, ready for analysis with xarray.
+- **Flexible Experimentation with Parameter Grids:** SweepExp simplifies running experiments over a grid of parameter combinations. Results are stored in an xarray dataset for easy access and analysis.
 - **Parallelization:** Support for parallelization using multiprocessing, or MPI for high-performance computing.
 - **User-Friendly API:**  Define the function to be tested, set up parameter sweeps, and specify return types effortlessly.
 

@@ -241,7 +241,7 @@ class SweepExp:
         # Get the priorities of the experiments
         priorities = self.priority.data[tuple(indices)]
         # Sort the indices based on the priorities
-        return indices.T[np.argsort(priorities)].T
+        return indices.T[np.argsort(-priorities)].T
 
     def _get_kwargs(self, index: tuple[int]) -> dict[str, any]:
         """Get the keyword arguments for the experiment at the given index."""

@@ -2,163 +2,208 @@ Usage
 =====
 
 .. toctree::
-   :maxdepth: 1
-   :hidden:
+    :maxdepth: 1
+    :hidden:
 
-   status
-   saving
-   custom_input_arguments
-   timeit
-   mpi
-   priorities
+    status
+    saving
+    custom_input_arguments
+    timeit
+    mpi
+    priorities
+    logging
 
+The sweepexp library provides a straightforward way to run experiments with
+multiple parameter combinations. This tutorial demonstrate its ease of use,
+focusing on the basic functionality. I.e. showcase how to define an experiment,
+run it sequentially, or switch to parallel execution with minimal changes.
 
-Let's say we have a function that depends on multiple parameters:
+Defining Your Experiment
+------------------------
+The first step is to define the custom function that you want to evaluate for
+different parameter combinations. Here's an example function:
 
-.. code-block:: python
+.. code-block::
+    def my_custom_experiment(x: float, y: float) -> dict:
+        """Add and multiply two numbers."""
+        return {"addition": x + y, "multiplication": x * y}
 
-   def my_function(param1: str, param2: float) -> dict:
-      # Do something with the parameters
-      result1 = param1.upper()
-      result2 = param2 ** 2
-      return {"result1": result1, "result2": result2}
+This simple function adds and multiplies two input numbers, but it could
+represent any custom computation, including more complex or expensive tasks,
+such as training a machine learning model or running a simulation. The input and
+output values can be customized to fit your specific use case. Important is that
+the function returns a dictionary with the results.
 
-and we want to test the function with different values of the parameters.
-We can use the `SweepExpParallel` class to create a grid of parameters and run the
-function with all the combinations:
-
-.. code-block:: python
-
-   from sweepexp import SweepExpParallel
-
-   sweep = SweepExpParallel(
-      func = my_function,
-      parameters = {
-         "param1": ["a", "b", "c"],
-         "param2": [1.0, 2.0, 3.0]
-      },
-      return_values = {
-         "result1": str,
-         "result2": float
-      },
-      save_path = "data/results.zarr",
-   )
-
-   results = sweep.run()
-
-   print(results)
-
-TODO: Make a dropdown with the output
-
-The individual experiments for each parameter combination are run in parallel
-on separate processes. Alternatively, you can use the `SweepExp` class to run the
-experiments sequentially, or the `SweepExpMPI` class to run the experiments in parallel
-using MPI.
-
-The results are saved to a `zarr` file, which can be easily loaded with xarray:
+Setting Up the Sweep
+--------------------
+Next, we create a `SweepExp` object that will run the experiment for all
+parameter combinations. We define the parameters to sweep, the return values of
+the function, and the function itself. Here's how to set up the sweep for the
+example function:
 
 .. code-block:: python
 
-   import xarray as xr
+    from sweepexp import SweepExp
 
-   ds = xr.open_zarr("data/results.zarr")
-   print(ds)
+    sweep = SweepExp(
+        func = my_custom_experiment,
+        parameters = { "x": [1, 2], "y": [3, 4, 5] },
+        return_values = { "addition": float, "multiplication": float },
+    )
 
-TODO: Make a dropdown with the output
-
-Let's walk though the example above:
-
-1. We define a function `my_function` that takes two parameters `param1` and
-   `param2` and returns a dictionary with two values `result1` and `result2`.
-2. We create a `SweepExpParallel` object with the following parameters:
-
-   - `func`: The function to run.
-   - `parameters`: A dictionary with the parameters to sweep. The keys are the parameter names and the values are lists with the values to test.
-   - `return_values`: A dictionary with the return values of the function. The keys are the return value names and the values are the types of the return values.
-   - `save_path`: The path to the output file.
-3. We run the experiments with the `run` method.
-
-Mask Parameter Combinations
----------------------------
-In some cases, we may want to exclude some parameter combinations from being
-tested. This can be done by modifying the `skip_mask` attribute of the `SweepExp`
-object. The `skip_mask` attribute is a xarray DataArray of boolean values that
-indicates which parameter combinations to skip. Entries with `True` will be
-skipped.
-
-For example if we want to skip the parameter combination `param1='a'` and
-`param2=2.0` in the example above, we can do the following:
+The `parameters` dictionary contains the parameter names as keys and lists of
+values to test as values. The `return_values` dictionary contains the return
+value names as keys and the types of the return values as values. The `func`
+parameter is the function to run. In this case, we want to test the "x" parameter
+with two values (1 and 2) and the "y" parameter with three values (3, 4, and 5).
+This makes a total of 6 experiments to run. Let's now run the experiments and
+print the results:
 
 .. code-block:: python
 
-   sweep.skip_mask.loc[{"param1": "a", "param2": 2.0}] = True
+    sweep.run()
 
-Experiment ID
--------------
-Each experiment is assigned a UUID that can be passed to the function as
-an argument. This can be useful when writing the result of an individual experiment
-to a file. The UUID can be accessed with the `uuid` attribute of the `SweepExp`
-object.
+    print(sweep.data)
 
-The following example shows how to modify the above example to include the UUID:
+The `run` method executes the experiments and stores the results in the `data`
+attribute of the `SweepExp` object. The `data` attribute is an xarray Dataset
+that contains the results of the experiments. The output will look like this:
 
 .. code-block::
 
-   from sweepexp import SweepExpParallel
+    <xarray.Dataset> Size: 160B
+    Dimensions:         (x: 2, y: 3)
+    Coordinates:
+      * x               (x) int64 16B 1 2
+      * y               (y) int64 24B 3 4 5
+    Data variables:
+        status          (x, y) <U1 24B 'C' 'C' 'C' 'C' 'C' 'C'
+        addition        (x, y) float64 48B 4.0 5.0 6.0 5.0 6.0 7.0
+        multiplication  (x, y) float64 48B 3.0 4.0 5.0 6.0 8.0 10.0
 
-   # Define the function that takes the UUID as an argument
-   def my_function(param1: str, param2: float, uuid: str) -> dict:
-      # Do something with the parameters
-      result1 = param1.upper()
-      result2 = param2 ** 2
+Parallel Execution using multiprocessing or MPI
+-----------------------------------------------
+Since the experiments are independent, they can be run in parallel to speed up
+the process. The sweepexp library provides two classes for parallel execution:
+`SweepExpParallel` for multiprocessing and `SweepExpMPI` for MPI. The setup is
+similar to the sequential execution, but the experiments are executed in parallel.
 
-      # Write the result to a file
-      with open(f"data/{uuid}.txt", "w") as f:
-         f.write(f"result1: {result1}\n")
-         f.write(f"result2: {result2}\n")
+The following example demonstrates how to run the same experiment as above in the
+three different modes: sequentially, in parallel with multiprocessing, and in
+parallel with MPI.
 
-      return {"result1": result1, "result2": result2}
+.. tab-set::
 
-   # Create the SweepExp object
-   sweep = SweepExpParallel(
-      func = my_function,
-      parameters = {
-         "param1": ["a", "b", "c"],
-         "param2": [1.0, 2.0, 3.0]
-      },
-      return_values = {
-         "result1": str,
-         "result2": float
-      },
-      save_path = "data/results.zarr",
-   )
+    .. tab-item:: Sequentially
 
-   # Mark the experiment ID to be passed to the function
-   sweep.pass_uuid = True
+        .. code-block:: python
 
-   # Run the experiments
-   results = sweep.run()
+            from sweepexp import SweepExp
 
-Experiment Status
------------------
-The status of the experiments is stored in the `status` attribute of the `SweepExp`.
-The `status` attribute is a xarray DataArray of strings that indicates the status
-of each experiment. The status can be one of the following values:
 
-- `not_started`: The experiment has not been started.
-- `completed`: The experiment has been completed.
-- `failed`: The experiment has failed.
+            def my_custom_experiment(x: float, y: float) -> dict:
+                """Add and multiply two numbers."""
+                return {"addition": x + y, "multiplication": x * y}
 
-By default, the `run` method will only run experiments that have not been started.
-To rerun all experiments, regardless of their status, you can reset the status
-with the `reset_status` method:
+            sweep = SweepExp(
+                func = my_custom_experiment,
+                parameters = { "x": [1, 2], "y": [3, 4, 5] },
+                return_values = { "addition": float, "multiplication": float },
+            )
 
-.. code-block:: python
+            sweep.run()
 
-   sweep.reset_status()
+    .. tab-item:: Parallel (multiprocessing)
 
-.. note::
-    When passing a file path to the `save_path` parameter, where the file
-    exists, the `SweepExp` object will attempt to load the existing file. Since
-    this will also load the status of the experiments, the `run` method will
-    only run experiments that have not been started.
+        .. code-block:: python
+
+            from sweepexp import SweepExpParallel
+
+
+            def my_custom_experiment(x: float, y: float) -> dict:
+                """Add and multiply two numbers."""
+                return {"addition": x + y, "multiplication": x * y}
+
+            sweep = SweepExpParallel(
+                func = my_custom_experiment,
+                parameters = { "x": [1, 2], "y": [3, 4, 5] },
+                return_values = { "addition": float, "multiplication": float },
+            )
+
+            sweep.run()
+      
+    .. tab-item:: Parallel (MPI)
+
+        .. code-block:: python
+
+            from sweepexp import SweepExpMPI
+
+
+            def my_custom_experiment(x: float, y: float) -> dict:
+                """Add and multiply two numbers."""
+                return {"addition": x + y, "multiplication": x * y}
+
+            sweep = SweepExpMPI(
+                func = my_custom_experiment,
+                parameters = { "x": [1, 2], "y": [3, 4, 5] },
+                return_values = { "addition": float, "multiplication": float },
+            )
+
+            sweep.run()
+
+        .. code-block:: bash
+
+            mpiexec -l -n 4 python my_script.py
+
+For more advanced features, such as measuring the duration of experiments, marking
+experiments to be skipped, or optimizing the execution order, check out the other
+tutorials:
+
+Advanced Topics
+---------------
+
+.. grid:: 1 2 2 1
+    :margin: 4 4 0 0
+    :gutter: 2
+
+    .. grid-item-card::  Status
+        :link: status
+        :link-type: doc
+
+        Track statuses and control which experiments to run.
+
+    .. grid-item-card::  Save Results to a File
+        :link: saving
+        :link-type: doc
+
+        Learn how to save, load and autosave results.
+
+    .. grid-item-card::  Adding Custom Input Arguments
+        :link: package_api
+        :link-type: doc
+
+        Add custom arguments to the function and modify them for each parameter combination.
+
+    .. grid-item-card::  Measure the Duration of Experiments
+        :link: timeit
+        :link-type: doc
+
+        Learn how to automatically measure the execution time of experiments.
+
+    .. grid-item-card::  Run Experiments in Parallel with MPI
+        :link: mpi
+        :link-type: doc
+
+        Learn how to run experiments in parallel using MPI.
+   
+    .. grid-item-card::  Optimize with Priorities
+        :link: priorities
+        :link-type: doc
+
+        Learn how to optimize the execution time by controlling the order of experiments.
+
+    .. grid-item-card::  Logging
+        :link: logging
+        :link-type: doc
+
+        Learn how to control the detail level of logging messages.
