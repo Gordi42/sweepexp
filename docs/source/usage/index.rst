@@ -8,7 +8,6 @@ Usage
    status
    saving
    custom_input_arguments
-   uuid
    timeit
    mpi
    priorities
