@@ -114,7 +114,6 @@ Let's revisit the example above and see the difference when priorities are used.
                 func = my_slow_function,
                 parameters = { "wait_time": [1, 2, 3] },
                 return_values = {},
-                enable_priorities = True,
             )
             # Enable the priorities and set it
             sweep.enable_priorities = True
