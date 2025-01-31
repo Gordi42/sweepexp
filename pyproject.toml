@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sweepexp"
-version = "0.1.0"
+version = "1.0.0"
 authors = [
   { name="Silvano Gordian Rosenau", email="silvano.rosenau@uni-hamburg.de" },
 ]
@@ -16,7 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 5 - Production/Stable",
 ]
 dependencies = [
   "lazypimp",

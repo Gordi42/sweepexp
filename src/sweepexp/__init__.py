@@ -6,7 +6,6 @@ https://github.com/Gordi42/sweepexp
 """
 __author__ = """Silvano Gordian Rosenau"""
 __email__ = "silvano.rosenau@uni-hamburg.de"
-__version__ = "0.1.0"
 from typing import TYPE_CHECKING
 
 from lazypimp import setup
