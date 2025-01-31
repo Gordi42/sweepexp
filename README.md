@@ -3,6 +3,7 @@
 [![codecov](https://codecov.io/github/Gordi42/sweepexp/graph/badge.svg?token=SHVDIIOL8Y)](https://codecov.io/github/Gordi42/sweepexp)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![GitHub License](https://img.shields.io/github/license/Gordi42/sweepexp)
+[![DOI](https://zenodo.org/badge/921273341.svg)](https://doi.org/10.5281/zenodo.14779187)
 
 <p align="center">
 <img src="docs/source/_static/sweepexp_logo.png?raw=true">
@@ -62,6 +63,19 @@ Data variables:
 
 For more information on how to use the package, please refer to the [documentation](https://sweepexp.readthedocs.io/)
 
+## How to cite
+
+```
+@software{Rosenau_sweepexp_2025,
+          author = {Rosenau, Silvano Gordian},
+          doi = {10.5281/zenodo.14779187},
+          month = jan,
+          title = {{SweepExp: A python package for running parallel experiments across parameter grids.}},
+          url = {https://github.com/Gordi42/sweepexp},
+          version = {1.0.2},
+          year = {2025}
+}
+```
 
 ## Author
 - [Silvano Gordian Rosenau](silvano.rosenau@uni-hamburg.de)
