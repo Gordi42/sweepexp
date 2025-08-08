@@ -21,6 +21,28 @@ if TYPE_CHECKING:  # pragma: no cover
 RESERVED_ARGUMENTS = {"uuid", "status", "duration", "priority"}
 POSSIBLE_STATUSES = {"N", "C", "F", "S"}
 SUPPORTED_EXTENSIONS = {".zarr", ".nc", ".cdf", ".pkl"}
+UNSUPPORTED_RETURN_TYPES = {
+    xr.DataArray: (
+        "xarray DataArray is not supported as a return value. "
+        "Use a numpy array instead."
+    ),
+    xr.Dataset: (
+        "xarray Dataset is not supported as a return value."
+        "Use a flat dictionary instead."
+    ),
+    dict: (
+        "Nested dictionaries are not supported as return values. "
+        "Use a flat dictionary instead."
+    ),
+    list: (
+        "Lists are not supported as return values. "
+        "Use a numpy array instead."
+    ),
+    tuple: (
+        "Tuples are not supported as return values. "
+        "Use a flat dictionary instead."
+    ),
+}
 
 class SweepExp:
 
@@ -35,10 +57,12 @@ class SweepExp:
     parameters : dict[str, list]
         The parameters to sweep over. The keys are the parameter names and the
         values are lists of the parameter values.
-    return_values : dict[str, type]
+    return_values : dict[str, type] (optional)
         The return values of the experiment function. The keys are the return
         value names and the values are the types of the return values.
-    save_path : Path | str | None
+        If not provided, the return values will be inferred from the
+        experiment function.
+    save_path : Path | str | None (optional)
         The path to save the results to. Supported file formats are: '.zarr',
         '.nc', '.cdf', '.pkl'. The '.zarr' and '.nc' formats only support
         numeric and boolean data. Only the '.pkl' format supports saving data
@@ -74,7 +98,6 @@ class SweepExp:
         sweep = SweepExp(
             func=my_experiment,
             parameters={"x": [1, 2, 3], "y": [4, 5, 6]},
-            return_values={"sum": int},
         )
 
         # Run the sweep
@@ -85,7 +108,7 @@ class SweepExp:
     def __init__(self,
                  func: Callable,
                  parameters: dict[str, list],
-                 return_values: dict[str, type],
+                 return_values: dict[str, type] | None = None,
                  save_path: Path | str | None = None) -> None:
 
         # Check that none of the parameters are reserved
@@ -95,6 +118,9 @@ class SweepExp:
             msg += f"{reserved_parameters}."
             msg += "Please choose different names."
             raise ValueError(msg)
+
+        # Check that the return values are not reserved
+        return_values = return_values or {}
         reserved_return_values = set(return_values) & RESERVED_ARGUMENTS
         if reserved_return_values:
             msg = "The following return value names are reserved: "
@@ -107,6 +133,7 @@ class SweepExp:
         self._parameters = self._convert_parameters(parameters)
         self._return_values = self._convert_return_types(return_values)
         self._save_path = None if save_path is None else Path(save_path)
+        self._name_mapping = {}
 
         self._custom_arguments = set()
         self.pass_uuid = False
@@ -253,6 +280,12 @@ class SweepExp:
                        for name in self.custom_arguments})
         return kwargs
 
+    def _get_name(self, name: str) -> str:
+        """Get the possibly renamed name."""
+        if name in self._name_mapping:
+            return self._name_mapping[name]
+        return name
+
     def _run_single(self, index: tuple[int]) -> None:
         """Run the experiment at the given index."""
         kwargs = self._get_kwargs(index)
@@ -278,15 +311,96 @@ class SweepExp:
         if self.auto_save:
             self.save(mode="w")
 
+    def _process_return_values(self, return_values: any) -> dict[str, any]:
+        """Convert the return values to a dictionary."""
+        if isinstance(return_values, dict):
+            return return_values
+
+        if isinstance(return_values, tuple):
+            # Create new names for the return values (result_1, result_2, ...)
+            return {f"result_{i+1}": value for i, value in enumerate(return_values)}
+
+        # Else we return a single value with the name 'result'
+        return {"result": return_values}
+
+    def _add_new_return_value(self, name: str, value: any) -> str:
+        """Add a new return value to the experiment."""
+        # Check if the type is any of the unsupported types
+        if type(value) in UNSUPPORTED_RETURN_TYPES:
+            msg = UNSUPPORTED_RETURN_TYPES[type(value)]
+            log.error(f"Unsupported return value type for '{name}':\n{msg}")
+            log.error(
+                "Continue with the sweep, but this return value will not be saved.")
+            # we still add the return value to the data, but it will be NaN
+            dtype = np.dtype(float)  # default to float so the data can be saved
+        elif type(value) is str:
+            # If the value is a string, we use object dtype for dynamic length
+            dtype = np.dtype(object)
+        else:
+            # Otherwise, we use the type of the value
+            dtype = np.dtype(type(value))
+        # Check that the name is not already taken
+        if name in RESERVED_ARGUMENTS:
+            log.warning(f"Return value '{name}' is a reserved name.")
+            log.warning(f"Reserved names are: {RESERVED_ARGUMENTS}.")
+            log.warning(f"Renaming '{name}' to '{name}_renamed'")
+            self._name_mapping[name] = f"{name}_renamed"
+            name = self._name_mapping[name]
+        # Add the return value to the return values dictionary
+        self.return_values[name] = dtype
+        # Add a new dataarray to the data
+        self.data[name] = xr.DataArray(
+            data=np.full(self.shape, np.nan, dtype=dtype),
+            dims=self.parameters.keys())
+
+        # We return the possibly renamed name
+        return name
+
+    def _upgrade_return_value_type(self, name: str, value: any) -> None:
+        """Upgrade the type of the return value if necessary."""
+        # Get the current dtype of the return value
+        current_dtype = self.data[name].dtype
+        # If the value is of a different type, we need to upgrade it
+        if np.can_cast(np.dtype(type(value)), current_dtype):
+            return
+        # Get the new dtype based on the value type
+        dtype = np.dtype(object) if type(value) is str else np.dtype(type(value))
+        # update the return value type in the return values dictionary
+        self.return_values[name] = dtype
+        # Cast the data to the new dtype
+        self.data[name] = self.data[name].astype(dtype)
+
+    def _set_return_value_at(self, index: tuple[int], name: str, value: any) -> None:
+        # first, we need to check if the result name is already in the data
+        if name not in self.return_values:
+            name = self._add_new_return_value(name, value)
+        # Check if the value is of a supported type
+        if type(value) in UNSUPPORTED_RETURN_TYPES:
+            # We don't need to print an error here, because we already did that
+            # in the _add_new_return_value method
+            return
+        # Check if the value can be converted to the type of the return value
+        self._upgrade_return_value_type(name, value)
+        # Set the value in the data
+        self.data[name].data[index] = value
+
     def _set_return_values_at(self,
                               index: tuple[int],
                               return_values: dict[str, any]) -> None:
         """Set the return values of the experiment at the given index."""
+        # First we cast the return values to a dictionary
+        return_values = self._process_return_values(return_values)
+        # Now we iterate over the return values and set them in the data
         for name, value in return_values.items():
-            self.data[name].data[index] = value
+            # Get the possibly renamed name
+            true_name = self._get_name(name)
+            # Set the return value at the given index
+            self._set_return_value_at(index, true_name, value)
 
     def _set_duration_at(self, index: tuple[int], duration: float) -> None:
         """Set the duration of the experiment at the given index."""
+        # TODO(Silvano): This raises an error if the data was loaded from a file
+        # because of a mismatch in the type
         self.duration.data[index] = duration
 
     # ================================================================
