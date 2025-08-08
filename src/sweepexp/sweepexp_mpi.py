@@ -29,9 +29,6 @@ class SweepExpMPI(SweepExp):
     parameters : dict[str, list]
         The parameters to sweep over. The keys are the parameter names and the
         values are lists of the parameter values.
-    return_values : dict[str, type]
-        The return values of the experiment function. The keys are the return
-        value names and the values are the types of the return values.
     save_path : Path | str | None
         The path to save the results to. Supported file formats are: '.zarr',
         '.nc', '.cdf', '.pkl'. The '.zarr' and '.nc' formats only support
@@ -69,7 +66,6 @@ class SweepExpMPI(SweepExp):
         sweep = SweepExpParallel(
             func=my_experiment,
             parameters={"x": [1, 2, 3], "y": [4, 5, 6]},
-            return_values={"sum": int},
         )
 
         # Run the sweep

@@ -96,29 +96,27 @@ def save_path(temp_dir, request):
 # ----------------------------------------------------------------
 #  Test initialization
 # ----------------------------------------------------------------
-def test_init_no_file(parameters, return_dict, exp_func):
+def test_init_no_file(parameters, exp_func):
     """Test the initialization of the SweepExp class without a file."""
     # Create the experiment
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
     )
     assert isinstance(exp, SweepExp)
 
-def test_init_with_nonexistent_file(parameters, return_dict, exp_func, save_path):
+def test_init_with_nonexistent_file(parameters, exp_func, save_path):
     """Test the initialization of the SweepExp class with a nonexistent file."""
     # Create the experiment
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
         save_path=save_path,
     )
     assert isinstance(exp, SweepExp)
 
 def test_init_with_valid_existing_file(
-        parameters, return_dict, exp_func, save_path, request):
+        parameters, exp_func, save_path, request):
     """Test the initialization of the SweepExp class with a valid existing file."""
     # Skip the test if objects are present (since they cannot be saved)
     skip = request.node.get_closest_marker("objects")
@@ -135,18 +133,12 @@ def test_init_with_valid_existing_file(
     # Modify some properties
     loc = (slice(None),) * len(parameters)
     exp.status.loc[loc] = "S"
-    # get the first name of the return dict
-    if return_dict.keys():
-        name = next(iter(return_dict.keys()))
-        exp.data[name].loc[loc] = 1
-    # Save the data
     exp.save()
 
     # Create a new experiment with the same file
     sweep = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
         save_path=save_path,
     )
 
@@ -154,82 +146,56 @@ def test_init_with_valid_existing_file(
     assert isinstance(sweep, SweepExp)
     # Check that the changes are present
     assert (sweep.status.values == "S").any()
-    if return_dict.keys():
-        assert (sweep.data[name].values == 1).any()
 
-@pytest.mark.parametrize(*("para, ret, msg", [
-    pytest.param({"extra": [1]}, {},
+@pytest.mark.parametrize(*("para, msg", [
+    pytest.param({"extra": [1]},
                  "Parameter mismatch", id="extra parameter"),
-    pytest.param({"int": [1, 3]}, {},
+    pytest.param({"int": [1, 3]},
                  "Parameter mismatch", id="different parameter values (int)"),
-    pytest.param({"bool": [False]}, {},
+    pytest.param({"bool": [False]},
                     "Parameter mismatch", id="different parameter values (bool)"),
-    pytest.param({"float": [1.01/3 + 1e-4]}, {},
+    pytest.param({"float": [1.01/3 + 1e-4]},
                     "Parameter mismatch", id="different parameter values (float)"),
-    pytest.param({"str": ["b"]}, {},
+    pytest.param({"str": ["b"]},
                   "Parameter mismatch", id="different parameter values (str)"),
-    pytest.param({"np": np.linspace(0, 1.1, 2)}, {},
+    pytest.param({"np": np.linspace(0, 1.1, 2)},
                   "Parameter mismatch", id="different parameter values (np)"),
-    pytest.param({}, {"extra": int},
-                 "Return value mismatch", id="extra return value"),
 ]))
-def test_init_with_invalid_existing_file(para, ret, msg, save_path):
+def test_init_with_invalid_existing_file(para, msg, save_path):
     """Test the initialization of the SweepExp class with an invalid existing file."""
     parameters = {"int": [1, 2], "bool": [True], "float": [1.01/3], "str": ["a"],
                   "np": np.linspace(0, 1, 2)}
-    return_dict = {"r_int": int, "r_bool": bool, "r_float": float, "r_str": str}
     # Create the experiment
     SweepExp(
         func=lambda: None,  # dummy function (does not matter here)
         parameters=parameters,
-        return_values=return_dict,
         save_path=save_path,
     ).save()
 
     parameters.update(para)
-    return_dict.update(ret)
 
     with pytest.raises(ValueError, match=msg):
         SweepExp(
             func=lambda: None,  # dummy function (does not matter here)
             parameters=parameters,
-            return_values=return_dict,
             save_path=save_path,
-        )
-
-@pytest.mark.parametrize(*("parameters, return_dict, msg", [
-    pytest.param({"status": [1]}, {}, "parameter",
-                 id="status in parameters"),
-    pytest.param({}, {"status": int}, "return value",
-                 id="status in return values"),
-]))
-def test_init_reserved_names(parameters, return_dict, msg):
-    """Test the initialization of the SweepExp class with reserved names."""
-    # Create the experiment
-    with pytest.raises(ValueError, match=msg):
-        SweepExp(
-            func=lambda: None,  # dummy function (does not matter here)
-            parameters=parameters,
-            return_values=return_dict,
         )
 
 # ----------------------------------------------------------------
 #  Test properties
 # ----------------------------------------------------------------
 
-def test_properties_get(parameters, return_dict, exp_func):
+def test_properties_get(parameters, exp_func):
     """Test the properties of the SweepExp class."""
     # Create the experiment
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
     )
 
     # Check the public properties
     assert exp.func == exp_func
     assert exp.parameters == parameters
-    assert exp.return_values == return_dict
     assert exp.save_path is None
     assert exp.pass_uuid is False
     assert exp.auto_save is False
@@ -243,13 +209,12 @@ def test_properties_get(parameters, return_dict, exp_func):
     # All status values should be "not started"
     assert all(exp.status.values.flatten() == "N")
 
-def test_properties_set(parameters, return_dict, exp_func):
+def test_properties_set(parameters, exp_func):
     """Test setting the properties of the SweepExp class."""
     # Create the experiment
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
     )
 
     # Test setting properties that are allowed
@@ -267,19 +232,17 @@ def test_properties_set(parameters, return_dict, exp_func):
     assert (exp.status.values == status).any()
 
     # Test readonly properties (should raise an AttributeError)
-    readonly_properties = ["func", "parameters", "return_values", "save_path",
-                           "data", "status"]
+    readonly_properties = ["func", "parameters", "save_path", "data", "status"]
     for prop in readonly_properties:
         with pytest.raises(AttributeError):
             setattr(exp, prop, None)
 
-def test_uuid(parameters, return_dict, exp_func):
+def test_uuid(parameters, exp_func):
     """Test the uuid property."""
     # Create the experiment
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
     )
     # UUID disabled:
     # Check that uuid is not in the data variables
@@ -316,13 +279,12 @@ def test_uuid(parameters, return_dict, exp_func):
     assert exp.uuid.equals(old_uuid)
     assert "uuid" in exp.custom_arguments
 
-def test_duration(parameters, return_dict, exp_func):
+def test_duration(parameters, exp_func):
     """Test the duration property."""
     # Create the experiment
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
     )
     # Timeit disabled:
     # Check that duration is not in the data variables
@@ -359,13 +321,12 @@ def test_duration(parameters, return_dict, exp_func):
     exp.timeit = True
     assert exp.duration.equals(duration)
 
-def test_priority_property(parameters, return_dict, exp_func):
+def test_priority_property(parameters, exp_func):
     """Test the priority property."""
     # Create the experiment
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
     )
     # Priority disabled:
     # Check that priority is not in the data variables
@@ -421,7 +382,6 @@ def test_valid_custom_arguments(name, value):
     exp = SweepExp(
         func=lambda: None,
         parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
-        return_values={},
     )
     # Check that the custom arguments are empty
     assert exp.custom_arguments == set()
@@ -454,7 +414,6 @@ def test_invalid_custom_arguments(name, msg):
     exp = SweepExp(
         func=lambda: None,
         parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
-        return_values={},
     )
     exp.add_custom_argument("existing", 1)
     with pytest.raises(ValueError, match=msg):
@@ -465,7 +424,7 @@ def test_invalid_custom_arguments(name, msg):
 # ----------------------------------------------------------------
 
 @pytest.mark.parametrize("mode", ["x", "w"])
-def test_save(parameters, return_dict, exp_func, save_path, request, mode):  # noqa: PLR0913
+def test_save(parameters, exp_func, save_path, request, mode):
     """Test saving the data."""
     skip = request.node.get_closest_marker("objects")
     if skip is not None and save_path.suffix in [".zarr", ".nc"]:
@@ -474,7 +433,6 @@ def test_save(parameters, return_dict, exp_func, save_path, request, mode):  # n
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
         save_path=save_path,
     )
     # Check that the file does not exist
@@ -484,7 +442,7 @@ def test_save(parameters, return_dict, exp_func, save_path, request, mode):  # n
     # Check that the file exists
     assert save_path.exists()
 
-def test_load(parameters, return_dict, exp_func, save_path, request):
+def test_load(parameters, exp_func, save_path, request):
     """Test loading the data."""
     skip = request.node.get_closest_marker("objects")
     if skip is not None and save_path.suffix in [".zarr", ".nc"]:
@@ -493,7 +451,6 @@ def test_load(parameters, return_dict, exp_func, save_path, request):
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
         save_path=save_path,
     )
     # Save the data
@@ -517,7 +474,6 @@ def test_invalid_file_format(invalid_file):
     exp = SweepExp(
         func=lambda: None,
         parameters={"a": [1]},
-        return_values={},
         save_path=invalid_file,
     )
     with pytest.raises(ValueError, match=msg):
@@ -527,13 +483,12 @@ def test_invalid_file_format(invalid_file):
     exp = SweepExp(
         func=lambda: None,
         parameters={"a": [1]},
-        return_values={},
     )
     msg = "The save path is not set. Set the save path before saving."
     with pytest.raises(ValueError, match=msg):
         exp.save()
 
-def test_save_existing_data(parameters, return_dict, exp_func, save_path, request):
+def test_save_existing_data(parameters, exp_func, save_path, request):
     skip = request.node.get_closest_marker("objects")
     if skip is not None and save_path.suffix in [".zarr", ".nc"]:
         pytest.skip("Skipping test with objects")
@@ -541,7 +496,6 @@ def test_save_existing_data(parameters, return_dict, exp_func, save_path, reques
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
         save_path=save_path,
     )
     assert not save_path.exists()
@@ -554,7 +508,6 @@ def test_save_existing_data(parameters, return_dict, exp_func, save_path, reques
         exp.save()
     # With mode="w" the file should be overwritten
     exp.save(mode="w")
-    assert save_path.exists()
 
 # ----------------------------------------------------------------
 #  Test conversion functions
@@ -573,20 +526,6 @@ def test_convert_parameters(para_in, dtype):
     """Test the _convert_parameters function."""
     converted = SweepExp._convert_parameters({"a": para_in})["a"]
     assert converted.dtype is dtype
-
-@pytest.mark.parametrize(*("type_in, type_out", [
-    pytest.param(int, np.dtype("int64"), id="int"),
-    pytest.param(float, np.dtype("float64"), id="float"),
-    pytest.param(complex, np.dtype("complex128"), id="complex"),
-    pytest.param(str, np.dtype(object), id="str"),
-    pytest.param(bool, np.dtype(bool), id="bool"),
-    pytest.param(np.ndarray, np.dtype(object), id="np.ndarray"),
-    pytest.param(object, np.dtype(object), id="object"),
-]))
-def test_convert_return_types(type_in, type_out):
-    """Test the _convert_return_types function."""
-    converted = SweepExp._convert_return_types({"a": type_in})["a"]
-    assert converted is type_out
 
 # ----------------------------------------------------------------
 #  Test status updates
@@ -615,7 +554,6 @@ def test_reset_status(states, expected_status):
     exp = SweepExp(
         func=lambda: None,
         parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
-        return_values={},
     )
     exp.status.values = np.array([["F", "N", "S"],
                                   ["F", "N", "S"],
@@ -632,7 +570,6 @@ def test_reset_status_invalid(states):
     exp = SweepExp(
         func=lambda: None,
         parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
-        return_values={},
     )
     # Reset the status with invalid states
     with pytest.raises(ValueError, match="Invalid states"):
@@ -655,7 +592,6 @@ def test_get_indices(status, expepcted_indices):
     exp = SweepExp(
         func=lambda: None,
         parameters={"x": [1.0], "y": ["a", "b", "c"], "z": [1, 2]},
-        return_values={},
     )
     # set the status
     exp.status.values = np.array([[["N", "C"], ["N", "S"], ["S", "F"]]])
@@ -678,7 +614,6 @@ def test_sort_indices(with_priorities, expected_indices, first_kw):
     exp = SweepExp(
         func=lambda: None,
         parameters={"x": [1.0], "y": ["a", "b", "c"], "z": [1, 2]},
-        return_values={},
     )
     # set the priority
     exp.enable_priorities = True
@@ -694,23 +629,22 @@ def test_sort_indices(with_priorities, expected_indices, first_kw):
     first_index = next(zip(*indices, strict=True))
     assert exp._get_kwargs(first_index) == first_kw
 
-@pytest.mark.parametrize(*("ret_dict, ret_values", [
-    pytest.param({"a": int}, {"a": 1}, id="int"),
-    pytest.param({"b": float}, {"b": 1.0}, id="float"),
-    pytest.param({"c": complex}, {"c": 1.0 + 1j}, id="complex"),
-    pytest.param({"d": str}, {"d": "a"}, id="str"),
-    pytest.param({"e": bool}, {"e": False}, id="bool"),
-    pytest.param({"f": np.ndarray}, {"f": np.linspace(0, 1, 10)}, id="np.ndarray"),
-    pytest.param({"g": object}, {"g": MyObject(1)}, id="object"),
-    pytest.param({"a": int, "b": float}, {"a": 1, "b": 1.0}, id="int and float"),
-]))
-def test_set_return_values(ret_dict, ret_values):
+@pytest.mark.parametrize("ret_values", [
+    pytest.param({"a": 1}, id="int"),
+    pytest.param({"b": 1.0}, id="float"),
+    pytest.param({"c": 1.0 + 1j}, id="complex"),
+    pytest.param({"d": "a"}, id="str"),
+    pytest.param({"e": False}, id="bool"),
+    pytest.param({"f": np.linspace(0, 1, 10)}, id="np.ndarray"),
+    pytest.param({"g": MyObject(1)}, id="object"),
+    pytest.param({"a": 1, "b": 1.0}, id="int and float"),
+])
+def test_set_return_values(ret_values):
     """Test the _set_return_values function."""
     # Create the experiment
     exp = SweepExp(
         func=lambda: None,
         parameters={"x": [1.0], "y": ["a", "b", "c"], "z": [1, 2]},
-        return_values=ret_dict,
     )
     exp._set_return_values_at((0, 1, 0), ret_values)
     # Check that the return values are as expected
@@ -744,7 +678,6 @@ def test_get_kwargs(params, index, expected_kwargs):
     exp = SweepExp(
         func=lambda: None,
         parameters=params,
-        return_values={},
     )
     # Get the kwargs
     kwargs = exp._get_kwargs(index)
@@ -758,7 +691,6 @@ def test_get_kwargs_with_custom_arguments():
     exp = SweepExp(
         func=lambda: None,
         parameters={"a": [1, 2, 3, 4]},
-        return_values={},
     )
     exp.add_custom_argument("test", 1)
     # Get the kwargs
@@ -812,7 +744,6 @@ def test_add_unsupported_return_type(return_value, caplog):
     # Check that the error message is logged
     assert any("Unsupported return value type for" in msg for msg in caplog.messages)
     # Check that the return value is added
-    assert "test" in exp.return_values
     assert "test" in exp.data.data_vars
     assert np.isnan(exp.data["test"].values).all()
     assert exp.data["test"].dtype == np.dtype("float64")
@@ -836,7 +767,6 @@ def test_add_new_return_value(value, dtype):
     # Add a new return value
     exp._add_new_return_value("test", value)
     # Check that the return value is added
-    assert "test" in exp.return_values
     assert "test" in exp.data.data_vars
     assert exp.data["test"].dtype == dtype
 
@@ -853,7 +783,6 @@ def test_rename_return_value(used_name, caplog):
     # New name
     new_name = f"{used_name}_renamed"
     # Check that the return value is added
-    assert new_name in exp.return_values
     assert new_name in exp.data.data_vars
     assert any("is a reserved name" in msg for msg in caplog.messages)
 
@@ -899,16 +828,19 @@ cast_map = {
 def test_upgrade_return_value_type(or_type, value_type):
     """Test the _upgrade_return_value_type function."""
     original_dtype = test_dtypes[or_type]
+    oritinal_value = test_values[or_type]
     value = test_values[value_type]
     expected_dtype = cast_map[or_type][value_type]
     # Create the experiment
     exp = SweepExp(
         func=None,
         parameters={"x": [1, 2, 3]},
-        return_values={"a": original_dtype},
     )
-    # This function should upgrade the dtype
-    exp._set_return_value_at((0, ), "a", value)
+    # Set the return value with the original dtype
+    exp._set_return_value_at((0, ), "a", oritinal_value)
+    assert exp.data["a"].dtype == original_dtype
+    # set a new value with a different dtype
+    exp._set_return_value_at((1, ), "a", value)
     # Check that the dtype is as expected
     assert exp.data["a"].dtype == expected_dtype
 
@@ -922,7 +854,6 @@ def test_run_single():
     exp = SweepExp(
         func=simple_func,
         parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
-        return_values={"addition": int, "product": object},
     )
     # Run the experiment
     exp._run_single((2, 0))
@@ -945,7 +876,6 @@ def test_standard_run():
     exp = SweepExp(
         func=simple_func,
         parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
-        return_values={"addition": float, "product": object},
     )
     # Check that the status is not started
     assert (exp.status.values == "N").all()
@@ -978,9 +908,6 @@ def test_complex_run():
     exp = SweepExp(
         func=complex_func,
         parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
-        return_values={
-            "normal_dtype": float,  # we only give addition, other will add automatically
-        },
     )
     # Run the experiment
     exp.run()
@@ -989,10 +916,9 @@ def test_complex_run():
     # Check that all variables are in the return values and data
     for key in ["normal_dtype", "object", "changed_variable",
                 "unsupported", "duration_renamed", "none_value"]:
-        assert key in exp.return_values
         assert key in exp.data.data_vars
     # Check that the data types are as expected
-    assert exp.data["normal_dtype"].dtype == np.dtype("float64")
+    assert exp.data["normal_dtype"].dtype == np.dtype("int64")
     assert exp.data["object"].dtype == np.dtype(object)
     assert exp.data["changed_variable"].dtype == np.dtype(object)
     assert exp.data["unsupported"].dtype == np.dtype("float64")
@@ -1010,7 +936,6 @@ def test_run_with_uuid(temp_dir):
     sweep = SweepExp(
         func=my_experiment,
         parameters={"x": [1, 2, 3]},
-        return_values={},
     )
 
     # Enable the uuid
@@ -1033,7 +958,6 @@ def test_run_with_timeit():
     exp = SweepExp(
         func=slow_func,
         parameters={"wait_time": [0.3, 0.6, 0.9]},
-        return_values={},
     )
     # Enable the timeit property
     exp.timeit = True
@@ -1054,7 +978,6 @@ def test_run_with_failures():
     exp = SweepExp(
         func=fail_func,
         parameters={"should_fail": [False, True]},
-        return_values={},
     )
     # Run the experiment
     exp.run()
@@ -1069,7 +992,6 @@ def test_run_with_custom_arguments():
     exp = SweepExp(
         func=custom_func,
         parameters={"para1": [1, 2, 3]},
-        return_values={"res": float},
     )
 
     # Add a custom argument
@@ -1088,7 +1010,6 @@ def test_run_with_auto_save(save_path):
     exp = SweepExp(
         func=lambda x: {"res": 2 * x},
         parameters={"x": [1, 2, 3]},
-        return_values={"res": int},
         save_path=save_path,
     )
     exp.auto_save = True
@@ -1100,3 +1021,27 @@ def test_run_with_auto_save(save_path):
     assert exp.save.called
     # check that the method was called three times
     assert exp.save.call_count == len(exp.data["res"].values.flatten())
+
+# def test_run_continue(save_path):
+#     exp = SweepExp(
+#         func=lambda x: {"res": 2 * x},
+#         parameters={"x": [1, 2, 3]},
+#         save_path=save_path,
+#     )
+
+#     exp.timeit = True
+#     exp.auto_save = True
+#     exp.status.loc[{"x": 2}] = "S"
+
+#     # Run the experiment
+#     exp.run()
+
+#     # reload the experiment with a modified function
+#     exp2 = SweepExp(
+#         func=lambda x: {"res": 20 * x},
+#         parameters={"x": [1, 2, 3]},
+#         save_path=save_path,
+#     )
+#     exp2.timeit = True
+
+#     exp2.run("S")

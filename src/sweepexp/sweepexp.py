@@ -57,11 +57,6 @@ class SweepExp:
     parameters : dict[str, list]
         The parameters to sweep over. The keys are the parameter names and the
         values are lists of the parameter values.
-    return_values : dict[str, type] (optional)
-        The return values of the experiment function. The keys are the return
-        value names and the values are the types of the return values.
-        If not provided, the return values will be inferred from the
-        experiment function.
     save_path : Path | str | None (optional)
         The path to save the results to. Supported file formats are: '.zarr',
         '.nc', '.cdf', '.pkl'. The '.zarr' and '.nc' formats only support
@@ -108,8 +103,8 @@ class SweepExp:
     def __init__(self,
                  func: Callable,
                  parameters: dict[str, list],
-                 return_values: dict[str, type] | None = None,
-                 save_path: Path | str | None = None) -> None:
+                 save_path: Path | str | None = None,
+                 *_args: any, **_kwargs: any) -> None:  # for backward compatibility
 
         # Check that none of the parameters are reserved
         reserved_parameters = set(parameters) & RESERVED_ARGUMENTS
@@ -119,19 +114,9 @@ class SweepExp:
             msg += "Please choose different names."
             raise ValueError(msg)
 
-        # Check that the return values are not reserved
-        return_values = return_values or {}
-        reserved_return_values = set(return_values) & RESERVED_ARGUMENTS
-        if reserved_return_values:
-            msg = "The following return value names are reserved: "
-            msg += f"{reserved_return_values}."
-            msg += "Please choose different names."
-            raise ValueError(msg)
-
         # Set the parameters
         self._func = func
         self._parameters = self._convert_parameters(parameters)
-        self._return_values = self._convert_return_types(return_values)
         self._save_path = None if save_path is None else Path(save_path)
         self._name_mapping = {}
 
@@ -170,7 +155,6 @@ class SweepExp:
             sweep = SweepExp(
                 func=my_experiment,
                 parameters={"param1": [1, 2, 3]},
-                return_values={"product": int},
             )
 
             # Add a custom argument
@@ -346,8 +330,6 @@ class SweepExp:
             log.warning(f"Renaming '{name}' to '{name}_renamed'")
             self._name_mapping[name] = f"{name}_renamed"
             name = self._name_mapping[name]
-        # Add the return value to the return values dictionary
-        self.return_values[name] = dtype
         # Add a new dataarray to the data
         self.data[name] = xr.DataArray(
             data=np.full(self.shape, np.nan, dtype=dtype),
@@ -365,14 +347,14 @@ class SweepExp:
             return
         # Get the new dtype based on the value type
         dtype = np.dtype(object) if type(value) is str else np.dtype(type(value))
-        # update the return value type in the return values dictionary
-        self.return_values[name] = dtype
         # Cast the data to the new dtype
         self.data[name] = self.data[name].astype(dtype)
 
     def _set_return_value_at(self, index: tuple[int], name: str, value: any) -> None:
+        if name in RESERVED_ARGUMENTS and name + "_renamed" not in self.data.data_vars:
+            name = self._add_new_return_value(name, value)
         # first, we need to check if the result name is already in the data
-        if name not in self.return_values:
+        if name not in self.data.data_vars:
             name = self._add_new_return_value(name, value)
         # Check if the value is of a supported type
         if type(value) in UNSUPPORTED_RETURN_TYPES:
@@ -412,9 +394,6 @@ class SweepExp:
         variables = [
             {"name": "status", "type": str, "value": "N"},
         ]
-        # Add the return values
-        for name, dtype in self.return_values.items():
-            variables.append({"name": name, "type": dtype, "value": np.nan})
         # Create the xarray dataset and return it
         data = xr.Dataset(
             data_vars={var["name"]: (
@@ -468,13 +447,6 @@ class SweepExp:
                 msg += f"Expected: {values}, "
                 msg += f"Got: {obt_values}."
                 raise ValueError(msg)
-
-        # Compare the return values
-        if not set(self.return_values).issubset(set(data.data_vars)):
-            msg = "Return value mismatch: "
-            msg += f"Expected: {set(self.return_values)}, "
-            msg += f"Got: {set(data.data_vars)}."
-            raise ValueError(msg)
 
         # Check if the return types are the same
         return data
@@ -549,7 +521,6 @@ class SweepExp:
             sweep = SweepExp(
                 func=lambda x: {"y": x},
                 parameters={"x": [1, 2, 3]},
-                return_values={"y": int},
                 save_path="my_data.zarr"
             )
             # Run the sweep and save it
@@ -665,16 +636,6 @@ class SweepExp:
                 parameters[name] = np.array(values, dtype=object)
         return parameters
 
-    @staticmethod
-    def _convert_return_types(return_values: dict[str, type]) -> dict[str, np.dtype]:
-        """Convert the return types to numpy dtypes."""
-        for return_name, return_type in return_values.items():
-            if return_type is str:
-                return_values[return_name] = np.dtype(object)
-            else:
-                return_values[return_name] = np.dtype(return_type)
-        return return_values
-
     # ================================================================
     #  Properties
     # ================================================================
@@ -687,11 +648,6 @@ class SweepExp:
     def parameters(self) -> dict[str, list]:
         """The parameters to sweep over."""
         return self._parameters
-
-    @property
-    def return_values(self) -> dict[str, type]:
-        """The return values of the experiment function."""
-        return self._return_values
 
     @property
     def custom_arguments(self) -> set[str]:
@@ -737,7 +693,6 @@ class SweepExp:
             sweep = SweepExp(
                 func=my_experiment,
                 parameters={"x": [1, 2, 3]},
-                return_values={},
             )
 
             # Enable the uuid

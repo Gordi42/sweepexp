@@ -45,7 +45,6 @@ def test_standard_run():
     exp = SweepExpParallel(
         func=simple_func,
         parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
-        return_values={"addition": float, "product": object},
     )
     # Check that the status is not started
     assert (exp.status.values == "N").all()
@@ -78,9 +77,6 @@ def test_complex_run():
     exp = SweepExpParallel(
         func=complex_func,
         parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
-        return_values={
-            "normal_dtype": float,  # we only give addition, other will add automatically
-        },
     )
     # Run the experiment
     exp.run()
@@ -89,10 +85,9 @@ def test_complex_run():
     # Check that all variables are in the return values and data
     for key in ["normal_dtype", "object", "changed_variable",
                 "unsupported", "duration_renamed", "none_value"]:
-        assert key in exp.return_values
         assert key in exp.data.data_vars
     # Check that the data types are as expected
-    assert exp.data["normal_dtype"].dtype == np.dtype("float64")
+    assert exp.data["normal_dtype"].dtype == np.dtype("int64")
     assert exp.data["object"].dtype == np.dtype(object)
     assert exp.data["changed_variable"].dtype == np.dtype(object)
     assert exp.data["unsupported"].dtype == np.dtype("float64")
@@ -110,7 +105,6 @@ def test_run_with_uuid(temp_dir):
     sweep = SweepExpParallel(
         func=my_experiment,
         parameters={"x": [1, 2, 3]},
-        return_values={},
     )
 
     # Enable the uuid
@@ -133,7 +127,6 @@ def test_run_with_timeit():
     exp = SweepExpParallel(
         func=slow_func,
         parameters={"wait_time": [0.3, 0.6, 0.9]},
-        return_values={},
     )
     # Enable the timeit property
     exp.timeit = True
@@ -162,7 +155,6 @@ def test_run_speed():
     exp = SweepExpParallel(
         func=slow_func,
         parameters={"_uselss": [0, 1]},
-        return_values={},
     )
     # Run the experiment in parallel
     start = time.time()
@@ -182,7 +174,6 @@ def test_run_with_failures():
     exp = SweepExpParallel(
         func=fail_func,
         parameters={"should_fail": [False, True]},
-        return_values={},
     )
     # Run the experiment
     exp.run()
@@ -197,7 +188,6 @@ def test_run_with_custom_arguments():
     exp = SweepExpParallel(
         func=custom_func,
         parameters={"para1": [1, 2, 3]},
-        return_values={"res": float},
     )
 
     # Add a custom argument
@@ -215,7 +205,6 @@ def test_run_with_auto_save(save_path):
     exp = SweepExpParallel(
         func=lambda x: {"res": 2 * x},
         parameters={"x": [1, 2, 3]},
-        return_values={"res": int},
         save_path=save_path,
     )
     exp.auto_save = True
