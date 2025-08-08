@@ -59,6 +59,46 @@ def test_standard_run():
                                            [MyObject(2), MyObject(4)],
                                            [MyObject(3), MyObject(6)]]).all()
 
+def test_complex_run():
+    """Test the run function with a more complex setup."""
+    # Define a function that returns a dictionary with multiple values
+    def complex_func(x: int, y: MyObject) -> dict:
+        changed_variable = 1 if x == 1 else "a"  # variable that changes type
+
+        return {
+            "normal_dtype": x + y.value,
+            "object": MyObject(x * y.value),
+            "changed_variable": changed_variable,
+            "unsupported": [1, 3, 4],  # list are not supported
+            "duration": x * 3,  # this variable will be renamed
+            "none_value": None,
+        }
+
+    # Create the experiment
+    exp = SweepExpParallel(
+        func=complex_func,
+        parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
+        return_values={
+            "normal_dtype": float,  # we only give addition, other will add automatically
+        },
+    )
+    # Run the experiment
+    exp.run()
+    # Check that the status is as expected
+    assert (exp.status.values == "C").all()
+    # Check that all variables are in the return values and data
+    for key in ["normal_dtype", "object", "changed_variable",
+                "unsupported", "duration_renamed", "none_value"]:
+        assert key in exp.return_values
+        assert key in exp.data.data_vars
+    # Check that the data types are as expected
+    assert exp.data["normal_dtype"].dtype == np.dtype("float64")
+    assert exp.data["object"].dtype == np.dtype(object)
+    assert exp.data["changed_variable"].dtype == np.dtype(object)
+    assert exp.data["unsupported"].dtype == np.dtype("float64")
+    assert exp.data["duration_renamed"].dtype == np.dtype("int64")
+    assert exp.data["none_value"].dtype == np.dtype(object)
+
 def test_run_with_uuid(temp_dir):
     # Create a function that takes the uuis an an argument and write
     # something to a file with the uuid in the name

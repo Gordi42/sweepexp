@@ -1,6 +1,7 @@
 """Test the SweepExp class."""
 from __future__ import annotations
 
+import logging
 import time
 from unittest.mock import MagicMock
 
@@ -772,6 +773,145 @@ def test_get_kwargs_with_custom_arguments():
     # Check that the kwargs are as expected
     assert kwargs == {"a": 3, "test": 1, "uuid": exp.uuid.values.flatten()[2]}
 
+@pytest.mark.parametrize(*("return_values, keys", [
+    (1, ["result"]),
+    ({"a": 1}, ["a"]),
+    ({"a": 1, "b": 2}, ["a", "b"]),
+    ((1, 3, 1), ["result_1", "result_2", "result_3"]),
+]))
+def test_process_return_values(return_values, keys):
+    """Test the _process_return_values function."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1, 2, 3]},
+    )
+    processed = exp._process_return_values(return_values)
+    assert isinstance(processed, dict)
+    # Check that the key is in the processed dict
+    for key in keys:
+        assert key in processed
+
+@pytest.mark.parametrize("return_value", [
+    pytest.param([3, 2], id="list"),
+    pytest.param((3, 2), id="tuple"),
+    pytest.param({"a": 1}, id="dict"),
+    pytest.param(xr.DataArray([3, 2]), id="DataArray"),
+    pytest.param(xr.Dataset(), id="Dataset"),
+])
+def test_add_unsupported_return_type(return_value, caplog):
+    """Test the _process_return_values function with an unsupported return type."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1, 2, 3]},
+    )
+    with caplog.at_level(logging.ERROR):
+        _processed = exp._add_new_return_value("test", return_value)
+
+    # Check that the error message is logged
+    assert any("Unsupported return value type for" in msg for msg in caplog.messages)
+    # Check that the return value is added
+    assert "test" in exp.return_values
+    assert "test" in exp.data.data_vars
+    assert np.isnan(exp.data["test"].values).all()
+    assert exp.data["test"].dtype == np.dtype("float64")
+
+@pytest.mark.parametrize(*("value, dtype", [
+    pytest.param(1, np.dtype("int64"), id="int"),
+    pytest.param(1.0, np.dtype("float64"), id="float"),
+    pytest.param(1.0 + 1j, np.dtype("complex128"), id="complex"),
+    pytest.param("a", np.dtype(object), id="str"),
+    pytest.param(True, np.dtype(bool), id="bool"),
+    pytest.param(np.linspace(0, 1, 10), np.dtype(object), id="np.ndarray"),
+    pytest.param(MyObject(1), np.dtype(object), id="object"),
+]))
+def test_add_new_return_value(value, dtype):
+    """Test the _add_new_return_value function."""
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1, 2, 3]},
+    )
+    # Add a new return value
+    exp._add_new_return_value("test", value)
+    # Check that the return value is added
+    assert "test" in exp.return_values
+    assert "test" in exp.data.data_vars
+    assert exp.data["test"].dtype == dtype
+
+@pytest.mark.parametrize("used_name", ["duration", "priority", "status", "uuid"])
+def test_rename_return_value(used_name, caplog):
+    # Create the experiment
+    exp = SweepExp(
+        func=lambda: None,
+        parameters={"x": [1, 2, 3]},
+    )
+    # Add a new return value
+    with caplog.at_level(logging.WARNING):
+        exp._add_new_return_value(used_name, 1)
+    # New name
+    new_name = f"{used_name}_renamed"
+    # Check that the return value is added
+    assert new_name in exp.return_values
+    assert new_name in exp.data.data_vars
+    assert any("is a reserved name" in msg for msg in caplog.messages)
+
+test_values = {"int": 1, "float": 1.0, "complex": 1.0 + 1j,
+               "str": "a", "bool": True, "np": np.linspace(0, 1, 10),
+               "object": MyObject(1)}
+test_dtypes = {"int": np.dtype("int64"), "float": np.dtype("float64"),
+               "complex": np.dtype("complex128"), "str": np.dtype(object),
+               "bool": np.dtype(bool), "np": np.dtype(object),
+               "object": np.dtype(object)}
+cast_map = {
+    "int": {"int": np.dtype("int64"), "float": np.dtype("float64"),
+            "complex": np.dtype("complex128"), "str": np.dtype(object),
+            "bool": np.dtype("int64"), "np": np.dtype(object),
+            "object": np.dtype(object)},
+    "float": {"int": np.dtype("float64"), "float": np.dtype("float64"),
+              "complex": np.dtype("complex128"), "str": np.dtype(object),
+              "bool": np.dtype("float64"), "np": np.dtype(object),
+              "object": np.dtype(object)},
+    "complex": {"int": np.dtype("complex128"), "float": np.dtype("complex128"),
+                "complex": np.dtype("complex128"), "str": np.dtype(object),
+                "bool": np.dtype("complex128"), "np": np.dtype(object),
+                "object": np.dtype(object)},
+    "str": {"int": np.dtype(object), "float": np.dtype(object),
+            "complex": np.dtype(object), "str": np.dtype(object),
+            "bool": np.dtype(object), "np": np.dtype(object),
+            "object": np.dtype(object)},
+    "bool": {"int": np.dtype("int64"), "float": np.dtype("float64"),
+             "complex": np.dtype("complex128"), "str": np.dtype(object),
+             "bool": np.dtype(bool), "np": np.dtype(object),
+             "object": np.dtype(object)},
+    "np": {"int": np.dtype(object), "float": np.dtype(object),
+           "complex": np.dtype(object), "str": np.dtype(object),
+           "bool": np.dtype(object), "np": np.dtype(object),
+           "object": np.dtype(object)},
+    "object": {"int": np.dtype(object), "float": np.dtype(object),
+               "complex": np.dtype(object), "str": np.dtype(object),
+               "bool": np.dtype(object), "np": np.dtype(object),
+               "object": np.dtype(object)},
+}
+@pytest.mark.parametrize("or_type", test_dtypes.keys())
+@pytest.mark.parametrize("value_type", test_dtypes.keys())
+def test_upgrade_return_value_type(or_type, value_type):
+    """Test the _upgrade_return_value_type function."""
+    original_dtype = test_dtypes[or_type]
+    value = test_values[value_type]
+    expected_dtype = cast_map[or_type][value_type]
+    # Create the experiment
+    exp = SweepExp(
+        func=None,
+        parameters={"x": [1, 2, 3]},
+        return_values={"a": original_dtype},
+    )
+    # This function should upgrade the dtype
+    exp._set_return_value_at((0, ), "a", value)
+    # Check that the dtype is as expected
+    assert exp.data["a"].dtype == expected_dtype
+
 def test_run_single():
     """Test the _run_single function."""
     # Define a simple function
@@ -818,6 +958,46 @@ def test_standard_run():
     assert (exp.data["product"].values == [[MyObject(1), MyObject(2)],
                                            [MyObject(2), MyObject(4)],
                                            [MyObject(3), MyObject(6)]]).all()
+
+def test_complex_run():
+    """Test the run function with a more complex setup."""
+    # Define a function that returns a dictionary with multiple values
+    def complex_func(x: int, y: MyObject) -> dict:
+        changed_variable = 1 if x == 1 else "a"  # variable that changes type
+
+        return {
+            "normal_dtype": x + y.value,
+            "object": MyObject(x * y.value),
+            "changed_variable": changed_variable,
+            "unsupported": [1, 3, 4],  # list are not supported
+            "duration": x * 3,  # this variable will be renamed
+            "none_value": None,
+        }
+
+    # Create the experiment
+    exp = SweepExp(
+        func=complex_func,
+        parameters={"x": [1, 2, 3], "y": [MyObject(1), MyObject(2)]},
+        return_values={
+            "normal_dtype": float,  # we only give addition, other will add automatically
+        },
+    )
+    # Run the experiment
+    exp.run()
+    # Check that the status is as expected
+    assert (exp.status.values == "C").all()
+    # Check that all variables are in the return values and data
+    for key in ["normal_dtype", "object", "changed_variable",
+                "unsupported", "duration_renamed", "none_value"]:
+        assert key in exp.return_values
+        assert key in exp.data.data_vars
+    # Check that the data types are as expected
+    assert exp.data["normal_dtype"].dtype == np.dtype("float64")
+    assert exp.data["object"].dtype == np.dtype(object)
+    assert exp.data["changed_variable"].dtype == np.dtype(object)
+    assert exp.data["unsupported"].dtype == np.dtype("float64")
+    assert exp.data["duration_renamed"].dtype == np.dtype("int64")
+    assert exp.data["none_value"].dtype == np.dtype(object)
 
 def test_run_with_uuid(temp_dir):
     # Create a function that takes the uuis an an argument and write
