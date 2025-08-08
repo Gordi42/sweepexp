@@ -35,7 +35,6 @@ Here's an example:
     sweep = SweepExpMPI(
         func = my_slow_function,
         parameters = { "param": [1, 2, 3] },
-        return_values = { "result": float },
     )
     # We want to measure the total duration of the experiments
     start_time = time.time()

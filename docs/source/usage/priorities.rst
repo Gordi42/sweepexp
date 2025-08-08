@@ -82,7 +82,6 @@ Let's revisit the example above and see the difference when priorities are used.
             sweep = SweepExpParallel(
                 func = my_slow_function,
                 parameters = { "wait_time": [1, 2, 3] },
-                return_values = {},
             )
             # We want to measure the total duration of the experiments
             start_time = time.time()
@@ -113,7 +112,6 @@ Let's revisit the example above and see the difference when priorities are used.
             sweep = SweepExpParallel(
                 func = my_slow_function,
                 parameters = { "wait_time": [1, 2, 3] },
-                return_values = {},
             )
             # Enable the priorities and set it
             sweep.enable_priorities = True

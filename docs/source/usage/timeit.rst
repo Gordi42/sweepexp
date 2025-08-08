@@ -18,7 +18,6 @@ attribute of the `SweepExp` object. The duration is measured in seconds.
     sweep = SweepExp(
         func = sleep,
         parameters = { "wait_time": [0.2, 0.5, 0.8] },
-        return_values = {},
     )
 
     # Enable the timeit option

@@ -22,7 +22,6 @@ detailed debug information by setting the logging level to "DEBUG":
     sweep = SweepExp(
         func = my_custom_experiment,
         parameters = { "x": [1, 2], "y": [3, 4, 5] },
-        return_values = { "addition": float, "multiplication": float },
     )
 
     sweep.run()

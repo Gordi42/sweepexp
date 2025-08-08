@@ -40,7 +40,6 @@ def my_custom_experiment(x: float, y: float) -> dict:
 sweep = SweepExpParallel(
     func = my_custom_experiment,
     parameters = { "x": [1, 2], "y": [3, 4, 5] },
-    return_values = { "addition": float, "multiplication": float },
 )
 
 sweep.run()

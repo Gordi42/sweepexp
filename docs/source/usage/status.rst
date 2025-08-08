@@ -53,7 +53,6 @@ causing the function to fail.
     sweep = SweepExp(
         func = ratio,
         parameters = { "a": [1, 4], "b": [0, 2] },
-        return_values = { "rat": float },
     )
 
 We set the status of the experiment with the parameters `a=1` and `b=0` to `S`

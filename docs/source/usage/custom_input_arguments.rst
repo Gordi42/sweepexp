@@ -43,7 +43,6 @@ for each experiment:
     sweep = SweepExp(
         func = write_to_file,
         parameters = { "param1": [1, 4], "param2": [1, 2] },
-        return_values = {},
     )
 
     # Create an additional argument for the filename
@@ -81,7 +80,6 @@ filenames:
     sweep = SweepExp(
         func = write_to_file,
         parameters = { "param1": [1, 4], "param2": [1, 2] },
-        return_values = {},
     )
     # activate the pass uuid flag
     sweep.pass_uuid = True

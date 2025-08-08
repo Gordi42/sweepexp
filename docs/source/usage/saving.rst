@@ -19,7 +19,6 @@ NetCDF file:
     sweep = SweepExp(
         func = lambda a, b: { "rat": a / b },
         parameters = { "a": [1, 4], "b": [1, 2] },
-        return_values = { "rat": float },
         save_path = "results.cdf",
     )
 
@@ -55,7 +54,6 @@ completed experiments do not need to be repeated.
     sweep = SweepExp(
         func = lambda a, b: { "rat": a / b },
         parameters = { "a": [1, 4], "b": [1, 2] },
-        return_values = { "rat": float },
         save_path = "results.cdf",
     )
     sweep.auto_save = True

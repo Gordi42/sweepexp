@@ -38,9 +38,8 @@ the function returns a dictionary with the results.
 Setting Up the Sweep
 --------------------
 Next, we create a `SweepExp` object that will run the experiment for all
-parameter combinations. We define the parameters to sweep, the return values of
-the function, and the function itself. Here's how to set up the sweep for the
-example function:
+parameter combinations. We pass the function and the parameters we want to sweep
+over. Here's how to set up the sweep for the example function above:
 
 .. code-block:: python
 
@@ -49,14 +48,12 @@ example function:
     sweep = SweepExp(
         func = my_custom_experiment,
         parameters = { "x": [1, 2], "y": [3, 4, 5] },
-        return_values = { "addition": float, "multiplication": float },
     )
 
 The `parameters` dictionary contains the parameter names as keys and lists of
-values to test as values. The `return_values` dictionary contains the return
-value names as keys and the types of the return values as values. The `func`
-parameter is the function to run. In this case, we want to test the "x" parameter
-with two values (1 and 2) and the "y" parameter with three values (3, 4, and 5).
+values to test as values. The `func` parameter is the function to run. In this
+case, we want to test the "x" parameter with two values (1 and 2) and
+the "y" parameter with three values (3, 4, and 5).
 This makes a total of 6 experiments to run. Let's now run the experiments and
 print the results:
 
@@ -109,7 +106,6 @@ parallel with MPI.
             sweep = SweepExp(
                 func = my_custom_experiment,
                 parameters = { "x": [1, 2], "y": [3, 4, 5] },
-                return_values = { "addition": float, "multiplication": float },
             )
 
             sweep.run()
@@ -128,7 +124,6 @@ parallel with MPI.
             sweep = SweepExpParallel(
                 func = my_custom_experiment,
                 parameters = { "x": [1, 2], "y": [3, 4, 5] },
-                return_values = { "addition": float, "multiplication": float },
             )
 
             sweep.run()
@@ -147,7 +142,6 @@ parallel with MPI.
             sweep = SweepExpMPI(
                 func = my_custom_experiment,
                 parameters = { "x": [1, 2], "y": [3, 4, 5] },
-                return_values = { "addition": float, "multiplication": float },
             )
 
             sweep.run()
