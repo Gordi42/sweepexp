@@ -11,7 +11,7 @@ detailed debug information by setting the logging level to "DEBUG":
 
 .. code-block:: python
 
-    from sweepexp import SweepExp, log
+    from sweepexp import sweepexp, log
 
     log.setLevel("DEBUG")
 
@@ -19,7 +19,7 @@ detailed debug information by setting the logging level to "DEBUG":
         """Add and multiply two numbers."""
         return {"addition": x + y, "multiplication": x * y}
 
-    sweep = SweepExp(
+    sweep = sweepexp(
         func = my_custom_experiment,
         parameters = { "x": [1, 2], "y": [3, 4, 5] },
     )
@@ -32,14 +32,14 @@ with output:
 
     INFO - Found 6 experiments to run.
     DEBUG - 6 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': np.int64(1), 'y': np.int64(3)}
+    DEBUG - Running experiment with kwargs: {'x': 1, 'y': 3}
     DEBUG - 5 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': np.int64(1), 'y': np.int64(4)}
+    DEBUG - Running experiment with kwargs: {'x': 1, 'y': 4}
     DEBUG - 4 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': np.int64(1), 'y': np.int64(5)}
+    DEBUG - Running experiment with kwargs: {'x': 1, 'y': 5}
     DEBUG - 3 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': np.int64(2), 'y': np.int64(3)}
+    DEBUG - Running experiment with kwargs: {'x': 2, 'y': 3}
     DEBUG - 2 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': np.int64(2), 'y': np.int64(4)}
+    DEBUG - Running experiment with kwargs: {'x': 2, 'y': 4}
     DEBUG - 1 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': np.int64(2), 'y': np.int64(5)}
+    DEBUG - Running experiment with kwargs: {'x': 2, 'y': 5}

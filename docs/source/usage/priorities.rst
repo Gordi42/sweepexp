@@ -16,12 +16,10 @@ Consider the following example with three experiments:
 Case 1: Non-Optimal Order
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 If we run the experiments in the order A → B → C, the total execution time is 4
-seconds. Here's why:
+seconds (Fig. 1):
 
 - **Worker 1:** Executes A (1s) and C (3s), totaling 4 seconds.
 - **Worker 2:** Executes B (2s), leaving it idle for the remaining 2 seconds.
-
-This scenario is visualized in Figure 1.
 
 .. figure:: /_static/priorities_nonoptimal.svg
    :width: 60%
@@ -33,7 +31,7 @@ This scenario is visualized in Figure 1.
 Case 2: Optimal Order
 ~~~~~~~~~~~~~~~~~~~~~
 If we run the experiments in the order C → B → A, the total execution time is
-only 3 seconds. Here's why:
+only 3 seconds.
 
 - **Worker 1:** Executes C (3s).
 - **Worker 2:** Executes B (2s) and A (1s), totaling 3 seconds.
@@ -56,7 +54,8 @@ Controlling Execution Order with Priorities
 -------------------------------------------
 You can control the order of execution using priorities. To enable this feature:
 
-1. Set the `enable_priorities` flag to True.
+1. Set the `enable_priorities` flag to True (either in the constructor or 
+    by setting `sweep.enable_priorities = True`).
 2. Assign a priority to each experiment using the `priority` attribute.
     - Higher priority experiments (e.g., priority 3) will be executed before lower priority ones (e.g., priority 1).
     - By default, all experiments have priority 0.
@@ -73,20 +72,20 @@ Let's revisit the example above and see the difference when priorities are used.
         .. code-block:: python
 
             import time
-            from sweepexp import SweepExpParallel
+            from sweepexp import sweepexp
 
             def my_slow_function(wait_time: float) -> dict:
                 time.sleep(wait_time)
                 return {}
 
-            sweep = SweepExpParallel(
+            sweep = sweepexp(
                 func = my_slow_function,
                 parameters = { "wait_time": [1, 2, 3] },
+                mode = "parallel",
             )
             # We want to measure the total duration of the experiments
             start_time = time.time()
 
-            # Run the experiments in parallel with MPI
             sweep.run(max_workers=2)
 
             # Print the total duration
@@ -103,16 +102,17 @@ Let's revisit the example above and see the difference when priorities are used.
         .. code-block:: python
 
             import time
-            from sweepexp import SweepExpParallel
+            from sweepexp import sweepexp
 
             def my_slow_function(wait_time: float) -> dict:
                 time.sleep(wait_time)
                 return {}
 
-            sweep = SweepExpParallel(
+            sweep = sweepexp(
                 func = my_slow_function,
                 parameters = { "wait_time": [1, 2, 3] },
                 enable_priorities=True,
+                mode = "parallel",
             )
             # Set priorities (higher number -> first executed)
             sweep.priority.data = [1, 2, 3]

@@ -9,7 +9,7 @@ inflating the parameter grid.
 
 How to Use Custom Arguments
 ---------------------------
-With SweepExp, you can add custom arguments that apply to the experiment's
+With sweepexp, you can add custom arguments that apply to the experiment's
 function alongside the parameters in the grid. These custom arguments are added
 with add_custom_argument() and have a default value (shared across all
 experiments). After adding the custom argument, you can modify its values in the
@@ -31,7 +31,7 @@ for each experiment:
 
 .. code-block:: python
 
-    from sweepexp import SweepExp
+    from sweepexp import sweepexp
 
     # Create a function that writes two parameters to a file
     def write_to_file(param1: int, param2: int, filename: str):
@@ -40,7 +40,7 @@ for each experiment:
         return {}
 
     # Create a SweepExp object around the function
-    sweep = SweepExp(
+    sweep = sweepexp(
         func = write_to_file,
         parameters = { "param1": [1, 4], "param2": [1, 2] },
     )
@@ -55,7 +55,7 @@ for each experiment:
 
 Unique UUIDs for Filenames
 --------------------------
-You can also use a built-in feature in SweepExp to automatically generate a
+You can also use a built-in feature in sweepexp to automatically generate a
 unique UUID for each experiment, which can be useful for creating unique
 filenames without manually specifying them. This is particularly helpful when
 running a large number of experiments where manually assigning filenames might
@@ -66,7 +66,7 @@ filenames:
 
 .. code-block::
 
-    from sweepexp import SweepExp
+    from sweepexp import sweepexp
 
     # Create a function that writes two parameters to a file
     def write_to_file(param1: int, param2: int, uuid: str):
@@ -77,7 +77,7 @@ filenames:
         return {}
 
     # Create a SweepExp object around the function
-    sweep = SweepExp(
+    sweep = sweepexp(
         func = write_to_file,
         parameters = { "param1": [1, 4], "param2": [1, 2] },
         pass_uuid=True,  # Enable UUID passing

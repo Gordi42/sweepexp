@@ -7,15 +7,14 @@ attribute of the `SweepExp` object. The duration is measured in seconds.
 .. code-block::
 
     import time
-    from sweepexp import SweepExp
+    from sweepexp import sweepexp
 
     # Define a function that sleeps for a given number of seconds
     def sleep(wait_time: float) -> dict:
         time.sleep(wait_time)
         return {}
 
-    # Create a SweepExp object around the function
-    sweep = SweepExp(
+    sweep = sweepexp(
         func = sleep,
         parameters = { "wait_time": [0.2, 0.5, 0.8] },
         timeit=True,

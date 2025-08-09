@@ -37,15 +37,15 @@ the function returns a dictionary with the results.
 
 Setting Up the Sweep
 --------------------
-Next, we create a `SweepExp` object that will run the experiment for all
+Next, we create a `sweepexp` object that will run the experiment for all
 parameter combinations. We pass the function and the parameters we want to sweep
 over. Here's how to set up the sweep for the example function above:
 
 .. code-block:: python
 
-    from sweepexp import SweepExp
+    from sweepexp import sweepexp
 
-    sweep = SweepExp(
+    sweep = sweepexp(
         func = my_custom_experiment,
         parameters = { "x": [1, 2], "y": [3, 4, 5] },
     )
@@ -82,10 +82,9 @@ that contains the results of the experiments. The output will look like this:
 Parallel Execution using multiprocessing or MPI
 -----------------------------------------------
 Since the experiments are independent, they can be run in parallel to speed up
-the process. The sweepexp library provides two classes for parallel execution:
-`SweepExpParallel` for multiprocessing and `SweepExpMPI` for MPI. The setup is
-similar to the sequential execution, but the experiments are executed in parallel.
-
+the process. The sweepexp library provides two methods for parallel execution:
+- `mode="parallel"` for multiprocessing
+- `mode="mpi"` for MPI (high-performance computing)
 The following example demonstrates how to run the same experiment as above in the
 three different modes: sequentially, in parallel with multiprocessing, and in
 parallel with MPI.
@@ -96,16 +95,17 @@ parallel with MPI.
 
         .. code-block:: python
 
-            from sweepexp import SweepExp
+            from sweepexp import sweepexp
 
 
             def my_custom_experiment(x: float, y: float) -> dict:
                 """Add and multiply two numbers."""
                 return {"addition": x + y, "multiplication": x * y}
 
-            sweep = SweepExp(
+            sweep = sweepexp(
                 func = my_custom_experiment,
                 parameters = { "x": [1, 2], "y": [3, 4, 5] },
+                mode = "sequential",  # Default mode
             )
 
             sweep.run()
@@ -114,34 +114,36 @@ parallel with MPI.
 
         .. code-block:: python
 
-            from sweepexp import SweepExpParallel
+            from sweepexp import sweepexp
 
 
             def my_custom_experiment(x: float, y: float) -> dict:
                 """Add and multiply two numbers."""
                 return {"addition": x + y, "multiplication": x * y}
 
-            sweep = SweepExpParallel(
+            sweep = sweepexp(
                 func = my_custom_experiment,
                 parameters = { "x": [1, 2], "y": [3, 4, 5] },
+                mode = "parallel",  # Use parallel mode
             )
 
-            sweep.run()
+            sweep.run()  # Set max_workers=... to control the number of parallel workers
       
     .. tab-item:: Parallel (MPI)
 
         .. code-block:: python
 
-            from sweepexp import SweepExpMPI
+            from sweepexp import sweepexp
 
 
             def my_custom_experiment(x: float, y: float) -> dict:
                 """Add and multiply two numbers."""
                 return {"addition": x + y, "multiplication": x * y}
 
-            sweep = SweepExpMPI(
+            sweep = sweepexp(
                 func = my_custom_experiment,
                 parameters = { "x": [1, 2], "y": [3, 4, 5] },
+                mode = "mpi",  # Use MPI mode
             )
 
             sweep.run()

@@ -9,9 +9,9 @@ Others might involve combinations of parameters that you know are unnecessary
 and want to skip entirely. Restarting all experiments from scratch every time
 you encounter an issue wastes time and resources.
 
-The status mechanism in SweepExp solves this problem by providing a way to
+The status mechanism in sweepexp solves this problem by providing a way to
 monitor and control the progress of your experiments. Each experiment is assigned
-a status, which allows you to track what has been completed, what has failed,
+a status, which allows to track what has been completed, what has failed,
 and what has been skipped.
 
 What Are the Possible Status Values?
@@ -43,14 +43,14 @@ causing the function to fail.
 
 .. code-block:: python
     
-    from sweepexp import SweepExp
+    from sweepexp import sweepexp
 
     def ratio(a: int, b: int) -> float:
         if b == 0:
             raise ValueError("Division by zero")
         return { "rat": a / b }
 
-    sweep = SweepExp(
+    sweep = sweepexp(
         func = ratio,
         parameters = { "a": [1, 4], "b": [0, 2] },
     )
@@ -71,7 +71,7 @@ We set the status of the experiment with the parameters `a=1` and `b=0` to `S`
 
 .. code-block::
 
-    ERROR - Error in experiment {'a': np.int64(4), 'b': np.int64(0)}: Division by zero
+    ERROR - Error in experiment {'a': 4, 'b': 0}: Division by zero
     [[nan 0.5]
      [nan 2. ]]
 
@@ -112,7 +112,7 @@ with the argument `status='S'`. This will execute all experiments with the statu
 
 .. code-block::
 
-    ERROR - Error in experiment {'a': np.int64(1), 'b': np.int64(0)}: Division by zero
+    ERROR - Error in experiment {'a': 1, 'b': 0}: Division by zero
     [[nan 0.5]
      [nan 2. ]]
 

@@ -13,23 +13,20 @@ NetCDF file:
 
 .. code-block:: python
 
-    from sweepexp import SweepExp
+    from sweepexp import sweepexp
 
-    # Create a SweepExp object around a function that calculates the ratio of two numbers
-    sweep = SweepExp(
+    sweep = sweepexp(
         func = lambda a, b: { "rat": a / b },
         parameters = { "a": [1, 4], "b": [1, 2] },
         save_path = "results.cdf",
     )
-
-    # Run the experiments
     sweep.run()
 
     # Save the results to a file
     sweep.save()
 
 When executing this code a second time, a file named `results.cdf` already exists.
-In this case, the data is automatically loaded when the SweepExp object is
+In this case, the data is automatically loaded when the sweepexp object is
 initialized. Thus, calling `sweep.run()` during the second execution does not 
 perform any experiments, as their status is already marked as "C" (completed).
 
@@ -42,16 +39,16 @@ already exists. To overwrite the file, use the parameter `mode="w"`:
 
 Autosave
 --------
-To prevent data loss, enable the auto_save option by setting it to True.
+To prevent data loss, set the `auto_save` parameter to `True`.
 When enabled, the data is automatically saved after each completed experiment.
-This ensures that, in the event of an unexpected program crash, already
-completed experiments do not need to be repeated.
+This ensures that, in the event of an unexpected program crash, completed
+experiments do not need to be repeated.
 
 .. code-block:: python
 
-    from sweepexp import SweepExp
+    from sweepexp import sweepexp
 
-    sweep = SweepExp(
+    sweep = sweepexp(
         func = lambda a, b: { "rat": a / b },
         parameters = { "a": [1, 4], "b": [1, 2] },
         save_path = "results.cdf",
