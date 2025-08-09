@@ -389,8 +389,6 @@ class SweepExp:
 
     def _set_duration_at(self, index: tuple[int], duration: float) -> None:
         """Set the duration of the experiment at the given index."""
-        # TODO(Silvano): This raises an error if the data was loaded from a file
-        # because of a mismatch in the type
         self.duration.data[index] = duration
 
     # ================================================================
@@ -786,9 +784,11 @@ class SweepExp:
         self.data["duration"] = xr.DataArray(
             data=np.full(self.shape, np.nan, dtype=float),
             dims=self.parameters.keys(),
-            attrs={"units": "seconds",
-                   "long_name": "Duration of the experiment.",
-                   "description": "The time it took to run the experiment."},
+            # it would be nice to have a units attribute here, but
+            # xarray converts units=seconds to np.timedelta64 which can be annoying
+            attrs={
+                "long_name": "Duration of the experiment.",
+                "description": "The time in seconds it took to run the experiment."},
         )
 
     @property

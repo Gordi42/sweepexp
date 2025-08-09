@@ -1049,29 +1049,33 @@ def test_run_with_auto_save(save_path, method):
     # check that the method was called three times
     assert exp.save.call_count == len(exp.data["res"].values.flatten())
 
-# def test_run_continue(save_path):
-#     exp = SweepExp(
-#         func=lambda x: {"res": 2 * x},
-#         parameters={"x": [1, 2, 3]},
-#         save_path=save_path,
-#         timeit=True,
-#         auto_save=True,
-#     )
+def test_run_continue(save_path):
+    exp = SweepExp(
+        func=lambda x: {"res": 2 * x},
+        parameters={"x": [1, 2, 3]},
+        save_path=save_path,
+        timeit=True,
+        auto_save=True,
+    )
 
-#     exp.status.loc[{"x": 2}] = "S"
+    exp.status.loc[{"x": 2}] = "S"
 
-#     # Run the experiment
-#     exp.run()
+    # Run the experiment
+    exp.run()
 
-#     # reload the experiment with a modified function
-#     exp2 = SweepExp(
-#         func=lambda x: {"res": 20 * x},
-#         parameters={"x": [1, 2, 3]},
-#         save_path=save_path,
-#     )
+    # reload the experiment with a modified function
+    exp2 = SweepExp(
+        func=lambda x: {"res": 20 * x},
+        parameters={"x": [1, 2, 3]},
+        save_path=save_path,
+    )
 
-#     # check that timeit and auto_save are still enabled
-#     assert exp2.timeit
-#     assert exp2.auto_save
+    # check that timeit and auto_save are still enabled
+    assert exp2.timeit
+    assert exp2.auto_save
 
-#     exp2.run("S")
+    exp2.run("S")
+
+    # Check that the status is as expected
+    assert (exp2.status.values == "C").all()
+    assert (exp2.data["res"].values == [2, 40, 6]).all()
