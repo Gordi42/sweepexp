@@ -869,6 +869,34 @@ def test_run_single():
     assert exp.data["addition"].values[2, 0] == 4  # noqa: PLR2004
     assert exp.data["product"].values[2, 0] == MyObject(3)
 
+@pytest.mark.parametrize("arg", [
+    pytest.param(1, id="int"),
+    pytest.param(1.0, id="float"),
+    pytest.param(1.0 + 1j, id="complex"),
+    pytest.param("a", id="str"),
+    pytest.param(True, id="bool"),
+    pytest.param(MyObject(1), id="object"),
+    pytest.param(None, id="None"),
+])
+def test_argument_type(arg, caplog):
+    """Test the _argument_type function."""
+    def my_func(x: any) -> dict:
+        assert x == arg
+        assert type(x) is type(arg)
+
+    # Run the sweep
+    with caplog.at_level("DEBUG"):
+        data = SweepExp(func=my_func, parameters={"x": [arg]}).run()
+
+    # Fail the test if any ERROR log was recorded
+    assert not any(record.levelname == "ERROR" for record in caplog.records), \
+        f"Errors were logged: {[r.message for r in caplog.records if r.levelname == 'ERROR']}"
+
+    assert (data.status == "C").all()
+    kwargs = {"x": arg}
+    assert f"Running experiment with kwargs: {kwargs}" in caplog.text
+
+
 # ----------------------------------------------------------------
 #  Test the run function
 # ----------------------------------------------------------------

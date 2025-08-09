@@ -71,6 +71,39 @@ def test_mpi_world_size():
     min_size = 2
     assert size >= min_size
 
+@pytest.mark.parametrize("arg", [
+    pytest.param(1, id="int"),
+    pytest.param(1.0, id="float"),
+    pytest.param(1.0 + 1j, id="complex"),
+    pytest.param("a", id="str"),
+    pytest.param(True, id="bool"),
+    pytest.param(MyObject(1), id="object"),
+    pytest.param(None, id="None"),
+])
+@pytest.mark.mpi(min_size=2)
+def test_argument_type(arg, caplog):
+    """Test the _argument_type function."""
+    def my_func(x: any) -> dict:
+        assert x == arg
+        assert type(x) is type(arg)
+
+    # Run the sweep
+    with caplog.at_level("DEBUG"):
+        data = SweepExpMPI(func=my_func, parameters={"x": [arg]}).run()
+
+    # Fail the test if any ERROR log was recorded
+    assert not any(record.levelname == "ERROR" for record in caplog.records), \
+        f"Errors were logged: {[r.message for r in caplog.records if r.levelname == 'ERROR']}"
+
+    if MPI.COMM_WORLD.Get_rank() == 0:
+        assert (data.status == "C").all()
+    elif isinstance(arg, MyObject):
+        pass  # The Address of the object is different on each rank
+    elif MPI.COMM_WORLD.Get_rank() == 1:
+        kwargs = {"x": arg}
+        assert f"Rank 1 - Start experiment with kwargs: {kwargs}" in caplog.text
+
+
 @pytest.mark.mpi(min_size=2)
 def test_standard_run():
     # Define a simple function
