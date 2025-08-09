@@ -1092,7 +1092,7 @@ def test_run_with_auto_save(save_path, method):
 
 def test_run_continue(save_path):
     exp = SweepExp(
-        func=lambda x: {"res": 2 * x},
+        func=lambda x: {"res": 2 * x, "x": 10 * x},
         parameters={"x": [1, 2, 3]},
         save_path=save_path,
         timeit=True,
@@ -1104,9 +1104,11 @@ def test_run_continue(save_path):
     # Run the experiment
     exp.run()
 
+    assert exp._name_mapping == {"x": "x_renamed"}
+
     # reload the experiment with a modified function
     exp2 = SweepExp(
-        func=lambda x: {"res": 20 * x},
+        func=lambda x: {"res": 20 * x, "x": 1 * x},
         parameters={"x": [1, 2, 3]},
         save_path=save_path,
     )
@@ -1116,6 +1118,7 @@ def test_run_continue(save_path):
     assert exp2.auto_save
 
     exp2.run("S")
+    assert exp2._name_mapping == {"x": "x_renamed"}
 
     # Check that the status is as expected
     assert (exp2.status.values == "C").all()
