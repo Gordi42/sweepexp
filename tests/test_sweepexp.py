@@ -406,15 +406,9 @@ def test_valid_custom_arguments(name, value):
     # Check that the values are correct
     assert (exp.data[name].values == value).all()
 
-@pytest.mark.parametrize(*("name, msg", [
-    pytest.param("uuid", "reserved"),
-    pytest.param("duration", "reserved"),
-    pytest.param("priority", "reserved"),
-    pytest.param("status", "reserved"),
-    pytest.param("x", "parameter"),
-    pytest.param("existing", "already a custom"),
-]))
-def test_invalid_custom_arguments(name, msg):
+@pytest.mark.parametrize("name", [
+    "uuid", "duration", "priority", "status", "x", "existing"])
+def test_invalid_custom_arguments(name):
     """Test the add_custom_argument function with invalid arguments."""
     # Create the experiment
     exp = SweepExp(
@@ -422,7 +416,7 @@ def test_invalid_custom_arguments(name, msg):
         parameters={"x": [1, 2, 3], "y": ["a", "b", "c"]},
     )
     exp.add_custom_argument("existing", 1)
-    with pytest.raises(ValueError, match=msg):
+    with pytest.raises(ValueError, match="is taken."):
         exp.add_custom_argument(name, 1)
 
 # ----------------------------------------------------------------
@@ -791,7 +785,7 @@ def test_add_new_return_value(value, dtype):
     assert "test" in exp.data.data_vars
     assert exp.data["test"].dtype == dtype
 
-@pytest.mark.parametrize("used_name", ["duration", "priority", "status", "uuid"])
+@pytest.mark.parametrize("used_name", ["duration", "priority", "status", "uuid", "x"])
 def test_rename_return_value(used_name, caplog):
     # Create the experiment
     exp = SweepExp(
@@ -805,24 +799,7 @@ def test_rename_return_value(used_name, caplog):
     new_name = f"{used_name}_renamed"
     # Check that the return value is added
     assert new_name in exp.data.data_vars
-    assert any("is a reserved name" in msg for msg in caplog.messages)
-
-def test_return_value_same_name_as_parameter(caplog):
-    """Test that a return value with the same name as a parameter is handled."""
-    # Create the experiment
-    exp = SweepExp(
-        func=None,
-        parameters={"x": [1, 2, 3]},
-    )
-    # Add a new return value with the same name as a parameter
-    with caplog.at_level(logging.WARNING):
-        exp._add_new_return_value("x", 1)
-    # New name
-    new_name = "x_renamed"
-    # Check that the return value is added with a new name
-    assert new_name in exp.data.data_vars
-    assert any("is a parameter name" in msg for msg in caplog.messages)
-    assert any("renamed to" in msg for msg in caplog.messages)
+    assert any("is already taken" in msg for msg in caplog.messages)
 
 test_values = {"int": 1, "float": 1.0, "complex": 1.0 + 1j,
                "str": "a", "bool": True, "np": np.linspace(0, 1, 10),

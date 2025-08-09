@@ -118,6 +118,7 @@ class SweepExp:
         self._func = func
         self._parameters = self._convert_parameters(parameters)
         self._save_path = None if save_path is None else Path(save_path)
+        self._taken_names = set(self._parameters.keys()) | RESERVED_ARGUMENTS
         self._name_mapping = {}
 
         self._custom_arguments = set()
@@ -174,19 +175,13 @@ class SweepExp:
 
         """
         # check that the name is not reserved
-        if name in RESERVED_ARGUMENTS:
-            msg = f"Argument '{name}' is a reserved argument."
+        if name in self._taken_names:
+            msg = f"Argument '{name}' is taken. "
             msg += "Please choose a different name."
-            raise ValueError(msg)
-        # check that the name is not already in the parameters
-        if name in self.parameters:
-            msg = f"Argument '{name}' is already a parameter."
-            raise ValueError(msg)
-        if name in self.custom_arguments:
-            msg = f"Argument '{name}' is already a custom argument."
             raise ValueError(msg)
         # add the argument to the custom arguments
         self.custom_arguments.add(name)
+        self._taken_names.add(name)
         # add the argument to the data
         self.data[name] = xr.DataArray(
             data=np.full(self.shape, default_value),
@@ -339,9 +334,8 @@ class SweepExp:
             # Otherwise, we use the type of the value
             dtype = np.dtype(type(value))
         # Check that the name is not already taken
-        if name in RESERVED_ARGUMENTS:
-            log.warning(f"Return value '{name}' is a reserved name.")
-            log.warning(f"Reserved names are: {RESERVED_ARGUMENTS}.")
+        if name in self._taken_names:
+            log.warning(f"Return value '{name}' is already taken. ")
             log.warning(f"Renaming '{name}' to '{name}_renamed'")
             self._name_mapping[name] = f"{name}_renamed"
             name = self._name_mapping[name]
@@ -366,11 +360,13 @@ class SweepExp:
         self.data[name] = self.data[name].astype(dtype)
 
     def _set_return_value_at(self, index: tuple[int], name: str, value: any) -> None:
-        if name in RESERVED_ARGUMENTS and name + "_renamed" not in self.data.data_vars:
+        # Potentially create a new data variable for new return values
+        if ( (name in self._taken_names and name not in self._name_mapping)
+                or name not in self.data.data_vars):
             name = self._add_new_return_value(name, value)
-        # first, we need to check if the result name is already in the data
-        if name not in self.data.data_vars:
-            name = self._add_new_return_value(name, value)
+        else:
+            # If the name is already in the data, we can just use it
+            name = self._get_name(name)
         # Check if the value is of a supported type
         if type(value) in UNSUPPORTED_RETURN_TYPES:
             # We don't need to print an error here, because we already did that
