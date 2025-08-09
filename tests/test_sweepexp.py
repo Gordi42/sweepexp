@@ -807,6 +807,23 @@ def test_rename_return_value(used_name, caplog):
     assert new_name in exp.data.data_vars
     assert any("is a reserved name" in msg for msg in caplog.messages)
 
+def test_return_value_same_name_as_parameter(caplog):
+    """Test that a return value with the same name as a parameter is handled."""
+    # Create the experiment
+    exp = SweepExp(
+        func=None,
+        parameters={"x": [1, 2, 3]},
+    )
+    # Add a new return value with the same name as a parameter
+    with caplog.at_level(logging.WARNING):
+        exp._add_new_return_value("x", 1)
+    # New name
+    new_name = "x_renamed"
+    # Check that the return value is added with a new name
+    assert new_name in exp.data.data_vars
+    assert any("is a parameter name" in msg for msg in caplog.messages)
+    assert any("renamed to" in msg for msg in caplog.messages)
+
 test_values = {"int": 1, "float": 1.0, "complex": 1.0 + 1j,
                "str": "a", "bool": True, "np": np.linspace(0, 1, 10),
                "object": MyObject(1)}
@@ -953,6 +970,7 @@ def test_complex_run():
             "unsupported": [1, 3, 4],  # list are not supported
             "duration": x * 3,  # this variable will be renamed
             "none_value": None,
+            "x": True,  # this variable will be renamed
         }
 
     # Create the experiment
@@ -966,7 +984,7 @@ def test_complex_run():
     assert (exp.status.values == "C").all()
     # Check that all variables are in the return values and data
     for key in ["normal_dtype", "object", "changed_variable",
-                "unsupported", "duration_renamed", "none_value"]:
+                "unsupported", "duration_renamed", "none_value", "x_renamed"]:
         assert key in exp.data.data_vars
     # Check that the data types are as expected
     assert exp.data["normal_dtype"].dtype == np.dtype("int64")
@@ -975,6 +993,7 @@ def test_complex_run():
     assert exp.data["unsupported"].dtype == np.dtype("float64")
     assert exp.data["duration_renamed"].dtype == np.dtype("int64")
     assert exp.data["none_value"].dtype == np.dtype(object)
+    assert exp.data["x_renamed"].dtype == np.dtype("bool")
 
 def test_run_with_uuid(temp_dir, method):
     # Create a function that takes the uuis an an argument and write

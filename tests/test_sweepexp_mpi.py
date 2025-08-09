@@ -146,6 +146,7 @@ def test_complex_run():
             "unsupported": [1, 3, 4],  # list are not supported
             "duration": x * 3,  # this variable will be renamed
             "none_value": None,
+            "x": True,  # this variable will be renamed
         }
 
     # Create the experiment
@@ -162,7 +163,7 @@ def test_complex_run():
     assert (exp.status.values == "C").all()
     # Check that all variables are in the return values and data
     for key in ["normal_dtype", "object", "changed_variable",
-                "unsupported", "duration_renamed", "none_value"]:
+                "unsupported", "duration_renamed", "none_value", "x_renamed"]:
         assert key in exp.data.data_vars
     # Check that the data types are as expected
     assert exp.data["normal_dtype"].dtype == np.dtype("int64")
@@ -171,6 +172,7 @@ def test_complex_run():
     assert exp.data["unsupported"].dtype == np.dtype("float64")
     assert exp.data["duration_renamed"].dtype == np.dtype("int64")
     assert exp.data["none_value"].dtype == np.dtype(object)
+    assert exp.data["x_renamed"].dtype == np.dtype("bool")
 
 @pytest.mark.mpi(min_size=2)
 def test_run_with_uuid(tmp_dir):
