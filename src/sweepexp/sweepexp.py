@@ -104,7 +104,7 @@ class SweepExp:
                  func: Callable,
                  parameters: dict[str, list],
                  save_path: Path | str | None = None,
-                 *_args: any, **_kwargs: any) -> None:  # for backward compatibility
+                 **kwargs: any) -> None:
 
         # Check that none of the parameters are reserved
         reserved_parameters = set(parameters) & RESERVED_ARGUMENTS
@@ -121,14 +121,22 @@ class SweepExp:
         self._name_mapping = {}
 
         self._custom_arguments = set()
-        self.pass_uuid = False
-        self.auto_save = False
-        self.timeit = False
-        self.enable_priorities = False
+        self._pass_uuid = kwargs.get("pass_uuid", False)
+        self._auto_save = kwargs.get("auto_save", False)
+        self._timeit = kwargs.get("timeit", False)
+        self._enable_priorities = kwargs.get("enable_priorities", False)
+
 
         # create the xarray dataset (or load it from a file)
         path_exists = self.save_path is not None and self.save_path.exists()
         self._data = self._load_data_from_file() if path_exists else self._create_data()
+
+        # Set the sweep settings
+        self.pass_uuid = self._pass_uuid
+        self.auto_save = self._auto_save
+        self.timeit = self._timeit
+        self.enable_priorities = self._enable_priorities
+
 
     def add_custom_argument(self, name: str, default_value: any) -> None:
         """
@@ -408,6 +416,11 @@ class SweepExp:
             "description": "The status of the experiment.",
             "values": "N: not started, C: completed, F: failed, S: skip",
         }
+        # Add metadata (date of creation, author, etc.)
+        data.attrs = {
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
         return data
 
     def _load_data_from_file(self) -> xr.DataArray:
@@ -447,6 +460,16 @@ class SweepExp:
                 msg += f"Expected: {values}, "
                 msg += f"Got: {obt_values}."
                 raise ValueError(msg)
+
+        # Check if the sweep settings are in the file
+        if "timeit" in data.attrs:
+            self._timeit = data.attrs["timeit"]
+        if "auto_save" in data.attrs:
+            self._auto_save = data.attrs["auto_save"]
+        if "pass_uuid" in data.attrs:
+            self._pass_uuid = data.attrs["pass_uuid"]
+        if "enable_priorities" in data.attrs:
+            self._enable_priorities = data.attrs["enable_priorities"]
 
         # Check if the return types are the same
         return data
@@ -706,6 +729,7 @@ class SweepExp:
     @pass_uuid.setter
     def pass_uuid(self, pass_uuid: bool) -> None:
         self._pass_uuid = pass_uuid
+        self.data.attrs["pass_uuid"] = int(pass_uuid)
         if not pass_uuid:
             # remove the uuid from the custom arguments if it is there
             self._custom_arguments.discard("uuid")
@@ -734,6 +758,7 @@ class SweepExp:
     @auto_save.setter
     def auto_save(self, auto_save: bool) -> None:
         self._auto_save = auto_save
+        self.data.attrs["auto_save"] = int(auto_save)
 
     @property
     def timeit(self) -> bool:
@@ -751,6 +776,7 @@ class SweepExp:
     @timeit.setter
     def timeit(self, timeit: bool) -> None:
         self._timeit = timeit
+        self.data.attrs["timeit"] = int(timeit)
         if not timeit:
             return
         # Check if the duration is already in the data
@@ -773,6 +799,7 @@ class SweepExp:
     @enable_priorities.setter
     def enable_priorities(self, enable_priorities: bool) -> None:
         self._enable_priorities = enable_priorities
+        self.data.attrs["enable_priorities"] = int(enable_priorities)
         if not enable_priorities:
             return
         # Check if the priority is already in the data

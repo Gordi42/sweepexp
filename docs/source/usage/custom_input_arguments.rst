@@ -80,9 +80,8 @@ filenames:
     sweep = SweepExp(
         func = write_to_file,
         parameters = { "param1": [1, 4], "param2": [1, 2] },
+        pass_uuid=True,  # Enable UUID passing
     )
-    # activate the pass uuid flag
-    sweep.pass_uuid = True
 
     sweep.run()
 

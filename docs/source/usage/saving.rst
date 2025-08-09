@@ -55,6 +55,6 @@ completed experiments do not need to be repeated.
         func = lambda a, b: { "rat": a / b },
         parameters = { "a": [1, 4], "b": [1, 2] },
         save_path = "results.cdf",
+        auto_save = True,
     )
-    sweep.auto_save = True
     sweep.run()

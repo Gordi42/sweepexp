@@ -89,6 +89,10 @@ def return_dict(return_values):
 def save_path(temp_dir, request):
     return temp_dir / f"test{request.param}"
 
+@pytest.fixture(params=["kwarg", "property"])
+def method(request):
+    return request.param
+
 # ================================================================
 #  Tests
 # ================================================================
@@ -127,8 +131,8 @@ def test_init_with_valid_existing_file(
     exp = SweepExp(
         func=exp_func,
         parameters=parameters,
-        return_values=return_dict,
         save_path=save_path,
+        timeit=True,
     )
     # Modify some properties
     loc = (slice(None),) * len(parameters)
@@ -146,6 +150,8 @@ def test_init_with_valid_existing_file(
     assert isinstance(sweep, SweepExp)
     # Check that the changes are present
     assert (sweep.status.values == "S").any()
+    assert sweep.timeit
+    assert not sweep.auto_save
 
 @pytest.mark.parametrize(*("para, msg", [
     pytest.param({"extra": [1]},
@@ -925,7 +931,7 @@ def test_complex_run():
     assert exp.data["duration_renamed"].dtype == np.dtype("int64")
     assert exp.data["none_value"].dtype == np.dtype(object)
 
-def test_run_with_uuid(temp_dir):
+def test_run_with_uuid(temp_dir, method):
     # Create a function that takes the uuis an an argument and write
     # something to a file with the uuid in the name
     def my_experiment(x: int, uuid: str) -> dict:
@@ -933,13 +939,20 @@ def test_run_with_uuid(temp_dir):
             file.write(f"Experiment with x={x} and uuid={uuid}.")
         return {}
 
-    sweep = SweepExp(
-        func=my_experiment,
-        parameters={"x": [1, 2, 3]},
-    )
+    if method == "kwarg":
+        # Create the experiment with uuid enabled via kwargs
+        sweep = SweepExp(
+            func=my_experiment,
+            parameters={"x": [1, 2, 3]},
+            pass_uuid=True,  # Enable uuid via kwargs
+        )
+    else:
+        sweep = SweepExp(
+            func=my_experiment,
+            parameters={"x": [1, 2, 3]},
+        )
+        sweep.pass_uuid = True
 
-    # Enable the uuid
-    sweep.pass_uuid = True
     # Run the sweep
     sweep.run()
     # Check that the three files were created
@@ -949,18 +962,24 @@ def test_run_with_uuid(temp_dir):
         with open(f"{temp_dir}/output_{uuid}.txt") as file:  # noqa: PTH123
             assert file.read() == f"Experiment with x={i+1} and uuid={uuid}."
 
-def test_run_with_timeit():
+def test_run_with_timeit(method):
     # define a function that takes some time
     def slow_func(wait_time: float) -> dict:
         time.sleep(wait_time)
         return {}
     # Create the experiment
-    exp = SweepExp(
-        func=slow_func,
-        parameters={"wait_time": [0.3, 0.6, 0.9]},
-    )
-    # Enable the timeit property
-    exp.timeit = True
+    if method == "kwarg":
+        exp = SweepExp(
+            func=slow_func,
+            parameters={"wait_time": [0.3, 0.6, 0.9]},
+            timeit=True,  # Enable timeit via kwargs
+        )
+    else:
+        exp = SweepExp(
+            func=slow_func,
+            parameters={"wait_time": [0.3, 0.6, 0.9]},
+        )
+        exp.timeit = True
     # Run the experiment
     exp.run()
     # Check that the duration is not nan
@@ -1005,14 +1024,22 @@ def test_run_with_custom_arguments():
     # Check that the return values are as expected
     assert (exp.data["res"].values == [2.0, 4.0, 6.0]).all()
 
-def test_run_with_auto_save(save_path):
-
-    exp = SweepExp(
-        func=lambda x: {"res": 2 * x},
-        parameters={"x": [1, 2, 3]},
-        save_path=save_path,
-    )
-    exp.auto_save = True
+def test_run_with_auto_save(save_path, method):
+    if method == "kwarg":
+        # Create the experiment with auto_save enabled via kwargs
+        exp = SweepExp(
+            func=lambda x: {"res": 2 * x},
+            parameters={"x": [1, 2, 3]},
+            save_path=save_path,
+            auto_save=True,
+        )
+    else:
+        exp = SweepExp(
+            func=lambda x: {"res": 2 * x},
+            parameters={"x": [1, 2, 3]},
+            save_path=save_path,
+        )
+        exp.auto_save = True
 
     # modify the save method to check if it is called
     exp.save = MagicMock(wraps=exp.save)
@@ -1027,10 +1054,10 @@ def test_run_with_auto_save(save_path):
 #         func=lambda x: {"res": 2 * x},
 #         parameters={"x": [1, 2, 3]},
 #         save_path=save_path,
+#         timeit=True,
+#         auto_save=True,
 #     )
 
-#     exp.timeit = True
-#     exp.auto_save = True
 #     exp.status.loc[{"x": 2}] = "S"
 
 #     # Run the experiment
@@ -1042,6 +1069,9 @@ def test_run_with_auto_save(save_path):
 #         parameters={"x": [1, 2, 3]},
 #         save_path=save_path,
 #     )
-#     exp2.timeit = True
+
+#     # check that timeit and auto_save are still enabled
+#     assert exp2.timeit
+#     assert exp2.auto_save
 
 #     exp2.run("S")
