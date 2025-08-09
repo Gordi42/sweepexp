@@ -467,14 +467,13 @@ class SweepExp:
                 raise ValueError(msg)
 
         # Check if the sweep settings are in the file
-        if "timeit" in data.attrs:
-            self._timeit = data.attrs["timeit"]
-        if "auto_save" in data.attrs:
-            self._auto_save = data.attrs["auto_save"]
-        if "pass_uuid" in data.attrs:
-            self._pass_uuid = data.attrs["pass_uuid"]
-        if "enable_priorities" in data.attrs:
-            self._enable_priorities = data.attrs["enable_priorities"]
+        for settings in ["timeit", "auto_save", "pass_uuid", "enable_priorities"]:
+            if settings not in data.attrs:
+                continue
+            # Set the settings as a private attribute (we don't want to call
+            # the setter here, because the data is not yet set)
+            # The setter will be called later in the initialization
+            setattr(self, f"_{settings}", data.attrs[settings])
 
         # Check if the return types are the same
         return data

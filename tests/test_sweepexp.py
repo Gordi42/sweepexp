@@ -904,8 +904,10 @@ def test_argument_type(arg, caplog):
         data = SweepExp(func=my_func, parameters={"x": [arg]}).run()
 
     # Fail the test if any ERROR log was recorded
-    assert not any(record.levelname == "ERROR" for record in caplog.records), \
-        f"Errors were logged: {[r.message for r in caplog.records if r.levelname == 'ERROR']}"
+    assert not any(record.levelname == "ERROR" for record in caplog.records), (
+        "Errors were logged: "
+        f"{[r.message for r in caplog.records if r.levelname == 'ERROR']}"
+    )
 
     assert (data.status == "C").all()
     kwargs = {"x": arg}
