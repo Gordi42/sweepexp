@@ -142,6 +142,8 @@ class SweepExpParallel(SweepExp):
             while jobs and len(active_jobs) < max_workers:
                 # Remove the first process, start it and add it to the active processes
                 job = jobs.pop(0)
+                kwargs = self._get_kwargs(job["index"])
+                log.debug(f"Starting job with kwargs: {kwargs}")
                 job["process"].start()
                 active_jobs.append(job)
 
@@ -174,6 +176,7 @@ class SweepExpParallel(SweepExp):
             return_values = {}
             status = "F"
         else:
+            log.debug(f"Finished experiment with kwargs: {self._get_kwargs(index)}")
             status = "C"
 
         # Set the status and return values of the experiment
@@ -209,7 +212,6 @@ class SweepExpParallel(SweepExp):
         """Wrap the experiment function to be run in a separate process."""
         def wrapper(kwargs: dict[str, any],  # pragma: no cover
                     queue: mp.Queue) -> None:
-            log.debug(f"Start experiment with kwargs: {kwargs}")
             # Save the start time if timeit is enabled
             if self.timeit:
                 start_time = time.time()
@@ -227,5 +229,4 @@ class SweepExpParallel(SweepExp):
 
             # Put the return values in the queue
             queue.put(return_values)
-            log.debug(f"Finished experiment with kwargs: {kwargs}")
         self._exp_func = wrapper
