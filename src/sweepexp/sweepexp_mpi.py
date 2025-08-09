@@ -86,7 +86,16 @@ class SweepExpMPI(SweepExp):
         if IS_MAIN_RANK:
             super().save(mode=mode)
 
-    def run(self, status: str | list[str] | None = "N") -> xr.Dataset:  # noqa: D102
+    def run(self,  # noqa: D102
+            status: str | list[str] | None = "N",
+            max_workers: int | None = None,
+            ) -> xr.Dataset:
+        if max_workers is not None and IS_MAIN_RANK:
+            msg = f"Argument 'max_workers={max_workers}' has no effect in "
+            msg += "mode=mpi. "
+            msg += "Use the 'mode=parallel' argument to run the sweep in parallel."
+            log.warning(msg)
+
         # Check that at least two ranks are available
         min_size = 2
         if MPI.COMM_WORLD.Get_size() < min_size:

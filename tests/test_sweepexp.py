@@ -878,6 +878,17 @@ def test_run_single():
     assert exp.data["addition"].values[2, 0] == 4  # noqa: PLR2004
     assert exp.data["product"].values[2, 0] == MyObject(3)
 
+def test_run_api(caplog):
+    exp = SweepExp(func=lambda x: {"a": 2*x}, parameters={"x": [1, 2]})
+    with caplog.at_level(logging.WARNING):
+        exp.run(status="N", max_workers=2)
+    # Check that the status is as expected
+    assert (exp.status.values == "C").all()
+    # Check that the return values are as expected
+    assert (exp.data["a"].values == [2, 4]).all()
+    # Check that a warning was logged for the max_workers
+    assert "max_workers" in caplog.text
+
 @pytest.mark.parametrize("arg", [
     pytest.param(1, id="int"),
     pytest.param(1.0, id="float"),

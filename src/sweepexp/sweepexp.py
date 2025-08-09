@@ -191,7 +191,10 @@ class SweepExp:
     # ================================================================
     #  Running experiments
     # ================================================================
-    def run(self, status: str | list[str] | None = "N") -> xr.Dataset:
+    def run(self,
+            status: str | list[str] | None = "N",
+            max_workers: int | None = None,
+            ) -> xr.Dataset:
         """
         Run all experiments with the status 'N' (not started).
 
@@ -200,6 +203,10 @@ class SweepExp:
         status : str | list[str] | None
             The status of the experiments to run. If None, all experiments with
             status 'N' (not started) are run.
+        max_workers : int | None
+            The maximum number of workers to run in parallel. If None, the
+            number of workers is set to the number of CPUs available.
+            Only relevant for parallel mode ('mode=parallel').
 
         Returns
         -------
@@ -224,6 +231,12 @@ class SweepExp:
             sweep.run(["S", "F"])
 
         """
+        if max_workers is not None:
+            msg = f"Argument 'max_workers={max_workers}' has no effect in "
+            msg += "the sequential mode. "
+            msg += "Use the 'mode=parallel' argument to run the sweep in parallel."
+            log.warning(msg)
+
         # Create a list of all experiments that need to be run
         indices = self._get_indices(status)
         number_of_experiments = len(indices[0])

@@ -69,48 +69,10 @@ class SweepExpParallel(SweepExp):
 
     """
 
-    def run(self,
+    def run(self,  # noqa: D102
             status: str | list[str] | None = "N",
             max_workers: int | None = None,
             ) -> xr.Dataset:
-        """
-        Run all experiments with the status 'N' (not started).
-
-        Parameters
-        ----------
-        status : str | list[str] | None
-            The status of the experiments to run. If None, all experiments with
-            status 'N' (not started) are run.
-        max_workers : int | None
-            The maximum number of workers to run in parallel. If None, the
-            number of workers is set to the number of CPUs available.
-
-        Returns
-        -------
-        xr.Dataset
-            The results of the experiments as an xarray dataset
-
-        Examples
-        --------
-
-        .. code-block:: python
-
-            from sweepexp import SweepExp
-            sweep = SweepExp(...)  # Initialize the sweep
-
-            # Run all experiments with status 'N'
-            sweep.run()
-
-            # Run all experiments with status 'C'
-            sweep.run("C")
-
-            # Run all experiments with status 'S' and 'F'
-            sweep.run(["S", "F"])
-
-            # Run all experiments with status 'N' using 4 workers
-            sweep.run(max_workers=4)
-
-        """
         # Set the max_workers to the number of CPUs if not specified
         max_workers = max_workers or mp.cpu_count()
 

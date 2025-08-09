@@ -105,6 +105,21 @@ def test_argument_type(arg, caplog):
         kwargs = {"x": arg}
         assert f"Rank 1 - Start experiment with kwargs: {kwargs}" in caplog.text
 
+@pytest.mark.mpi(min_size=2)
+def test_run_api(caplog):
+    exp = SweepExpMPI(func=lambda x: {"a": 2*x}, parameters={"x": [1, 2]})
+    with caplog.at_level("WARNING"):
+        exp.run(status="N", max_workers=2)
+
+    # Validate only on the main rank
+    if MPI.COMM_WORLD.Get_rank() != 0:
+        return
+    # Check that the status is as expected
+    assert (exp.status.values == "C").all()
+    # Check that the return values are as expected
+    assert (exp.data["a"].values == [2, 4]).all()
+    # Check that a warning was logged for the max_workers
+    assert "max_workers" in caplog.text
 
 @pytest.mark.mpi(min_size=2)
 def test_standard_run():
