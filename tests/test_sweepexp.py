@@ -1123,3 +1123,4 @@ def test_run_continue(save_path):
     # Check that the status is as expected
     assert (exp2.status.values == "C").all()
     assert (exp2.data["res"].values == [2, 40, 6]).all()
+    assert (exp2.data["x_renamed"].values == [10, 2, 30]).all()

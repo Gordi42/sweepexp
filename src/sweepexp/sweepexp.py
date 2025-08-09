@@ -339,10 +339,11 @@ class SweepExp:
             log.warning(f"Renaming '{name}' to '{name}_renamed'")
             self._name_mapping[name] = f"{name}_renamed"
             name = self._name_mapping[name]
-        # Add a new dataarray to the data
-        self.data[name] = xr.DataArray(
-            data=np.full(self.shape, np.nan, dtype=dtype),
-            dims=self.parameters.keys())
+        # Add a new dataarray to the data (data may already exist from a previous run)
+        if name not in self.data.data_vars:
+            self.data[name] = xr.DataArray(
+                data=np.full(self.shape, np.nan, dtype=dtype),
+                dims=self.parameters.keys())
 
         # We return the possibly renamed name
         return name
