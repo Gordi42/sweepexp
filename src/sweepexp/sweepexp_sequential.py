@@ -120,6 +120,7 @@ class SweepExp:
         self._save_path = None if save_path is None else Path(save_path)
         self._taken_names = set(self._parameters.keys()) | RESERVED_ARGUMENTS
         self._name_mapping = {}
+        self._invalid_names = set()
 
         self._custom_arguments = set()
         self._pass_uuid = kwargs.get("pass_uuid", False)
@@ -339,6 +340,7 @@ class SweepExp:
             log.error(
                 "Continue with the sweep, but this return value will not be saved.")
             # we still add the return value to the data, but it will be NaN
+            self._invalid_names.add(name)
             dtype = np.dtype(float)  # default to float so the data can be saved
         elif type(value) is str:
             # If the value is a string, we use object dtype for dynamic length
@@ -352,6 +354,8 @@ class SweepExp:
             log.warning(f"Renaming '{name}' to '{name}_renamed'")
             self._name_mapping[name] = f"{name}_renamed"
             name = self._name_mapping[name]
+        if isinstance(value, xr.DataArray):
+            self._add_xarray_dataarray(name, value)
         # Add a new dataarray to the data (data may already exist from a previous run)
         if name not in self.data.data_vars:
             self.data[name] = xr.DataArray(
@@ -360,6 +364,74 @@ class SweepExp:
 
         # We return the possibly renamed name
         return name
+
+    def _add_new_xarray_dimension_from_returned_dataarray(
+            self, dim_name: str, coordinates: list | np.ndarray) -> bool:
+        """
+        Add a new dimension to the xarray dataset from a returned DataArray.
+
+        Returns
+        -------
+        bool
+            True if the dimension was successfully added, False if not
+
+        """
+        if dim_name in self._taken_names:
+            msg = f"Got a DataArray with a dimension '{dim_name}' "
+            msg += "that is already taken by a parameter or custom argument."
+            log.error(msg)
+            return False
+
+        # There might be a chance that a dimension was already added before
+        # If so, we need to check if the coordinates match
+        if dim_name in self.data.coords:
+            # Check if the coordinates match
+            existing_coords = np.array(self.data.coords[dim_name].values)
+            coordinates = np.array(coordinates)
+            if ( existing_coords.shape != coordinates.shape
+                or not np.isclose(existing_coords, coordinates).all() ):
+                msg = f"Dimension '{dim_name}' already exists, "
+                msg += "but with different coordinates."
+                msg += f" Existing: {existing_coords}, New: {coordinates}."
+                log.error(msg)
+                return False
+            # Otherwise, we can just return True
+            return True
+
+        # If the dimension is already in the data, it collides with a different
+        # return value, so we cannot add it
+        if dim_name in self.data.data_vars:
+            msg = f"Dimension '{dim_name}' already exists in the data."
+            msg += " Cannot add a new dimension with the same name."
+            log.error(msg)
+            return False
+
+        # Finally, we can add the new dimension to the data
+        self._data = self.data.assign_coords({dim_name: coordinates})
+
+        return True
+
+    def _add_xarray_dataarray(self, name: str, value: xr.DataArray) -> None:
+        # First we need to check the dimensions
+        dimensions = value.dims
+        for dim in dimensions:
+            success = self._add_new_xarray_dimension_from_returned_dataarray(
+                dim_name=dim, coordinates=value.coords[dim].values)
+            if not success:
+                self._invalid_names.add(name)
+                return
+
+        # In case we loaded the data from a file, the data variable may already
+        # exist, but if so, we have to make sure that the dimensions match
+        if name in self.data.data_vars and set(value.dims) <= set(self.data[name].dims):
+            return
+
+        # Now we can add the new data variable to the data
+        self.data[name] = xr.DataArray(
+            data=np.full((*self.shape, *value.shape), np.nan, dtype=value.dtype),
+            dims=(*self.parameters.keys(), *value.dims),
+            attrs=value.attrs,
+        )
 
     def _upgrade_return_value_type(self, name: str, value: any) -> None:
         """Upgrade the type of the return value if necessary."""
@@ -382,7 +454,7 @@ class SweepExp:
             # If the name is already in the data, we can just use it
             name = self._get_name(name)
         # Check if the value is of a supported type
-        if type(value) in UNSUPPORTED_RETURN_TYPES:
+        if name in self._invalid_names:
             # We don't need to print an error here, because we already did that
             # in the _add_new_return_value method
             return

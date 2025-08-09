@@ -720,6 +720,63 @@ def test_get_kwargs_with_custom_arguments():
     # Check that the kwargs are as expected
     assert kwargs == {"a": 3, "test": 1, "uuid": exp.uuid.values.flatten()[2]}
 
+@pytest.mark.parametrize("dim_name", ["x", "result", "status"])
+def test_add_new_xarray_dimension_from_returned_dataarray_invalid_name(dim_name):
+    sweep = SweepExp( func=lambda x: 2*x, parameters={"x": [1, 2, 3]})
+    sweep.run()
+
+    success = sweep._add_new_xarray_dimension_from_returned_dataarray(
+        dim_name=dim_name, coordinates=[1, 1.2, 1.7])
+    assert not success, "Adding a new dimension with a taken name should fail"
+
+def test_add_new_xarray_dimension_from_returned_dataarray_existing_dim():
+    sweep = SweepExp( func=lambda x: 2*x, parameters={"x": [1, 2, 3]})
+    sweep.run()
+
+    success = sweep._add_new_xarray_dimension_from_returned_dataarray(
+        dim_name="y", coordinates=[1, 1.2, 1.7])
+
+    assert success, "Adding a new dimension with a new name should succeed"
+    assert "y" in sweep.data.dims, "The new dimension should be added to the data"
+
+    success = sweep._add_new_xarray_dimension_from_returned_dataarray(
+        dim_name="y", coordinates=[1, 1.2, 1.7])
+    assert success, "Should succeed as the cooridinates are the same"
+
+    success = sweep._add_new_xarray_dimension_from_returned_dataarray(
+        dim_name="y", coordinates=[1, 1.2, 1.8])
+    assert not success, "Should fail as the coordinates are different"
+
+    success = sweep._add_new_xarray_dimension_from_returned_dataarray(
+        dim_name="y", coordinates=[1, 1.2, 1.7, 1.8])
+    assert not success, "Should fail as the coordinates are different in length"
+
+def test_add_xarray_dataarray():
+    sweep = SweepExp( func=lambda x: 2*x, parameters={"x": [1, 2, 3]})
+    sweep.run()
+
+    u = xr.DataArray([0, 1, 2], dims=["nd"])
+    sweep._add_xarray_dataarray("test", u)
+    # check if the dataarray is added
+    assert "nd" in sweep.data.dims
+    assert "test" in sweep.data.data_vars
+    # we set the data to 0, and try to add the dataarray again
+    # it should not change the data
+    assert not (sweep.data["test"].values == 0).all()
+    sweep.data["test"].data[:] = 0
+    sweep._add_xarray_dataarray("test", u)
+    # check if the dataarray is still the same
+    assert (sweep.data["test"].values == 0).all()
+
+    # now we try to add a dataarray with a different shape but the same name
+    u = xr.DataArray([0, 1, 2, 3], dims=["nd"])
+    assert "test" not in sweep._invalid_names
+    sweep._add_xarray_dataarray("test", u)
+    assert "test" in sweep._invalid_names
+
+
+
+
 @pytest.mark.parametrize(*("return_values, keys", [
     (1, ["result"]),
     ({"a": 1}, ["a"]),
@@ -743,7 +800,7 @@ def test_process_return_values(return_values, keys):
     pytest.param([3, 2], id="list"),
     pytest.param((3, 2), id="tuple"),
     pytest.param({"a": 1}, id="dict"),
-    pytest.param(xr.DataArray([3, 2]), id="DataArray"),
+    pytest.param(xr.DataArray([3.1, 2]), id="DataArray"),
     pytest.param(xr.Dataset(), id="Dataset"),
 ])
 def test_add_unsupported_return_type(return_value, caplog):
@@ -758,6 +815,7 @@ def test_add_unsupported_return_type(return_value, caplog):
 
     # Check that the error message is logged
     assert any("Unsupported return value type for" in msg for msg in caplog.messages)
+    assert "test" in exp._invalid_names
     # Check that the return value is added
     assert "test" in exp.data.data_vars
     assert np.isnan(exp.data["test"].values).all()
