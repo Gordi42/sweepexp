@@ -262,10 +262,17 @@ class SweepExp:
         # Sort the indices based on the priorities
         return indices.T[np.argsort(-priorities)].T
 
+    def _get_value_from_index(self, name: str, index: tuple[int]) -> any:
+        value = self.data[name].data[index]
+        if isinstance(value, np.generic):
+            # Convert numpy generic types to native Python types
+            return value.item()
+        return value
+
     def _get_kwargs(self, index: tuple[int]) -> dict[str, any]:
         """Get the keyword arguments for the experiment at the given index."""
         # Get the values of the parameters at the given index
-        kwargs = {name: self.data[name].data[ind]
+        kwargs = {name: self._get_value_from_index(name, ind)
                   for name, ind in zip(self.parameters, index, strict=True)}
         # Get the custom arguments
         kwargs.update({name: self.data[name].data[index]

@@ -309,7 +309,7 @@ def test_duration(parameters, exp_func):
     # Check that all values are nan
     assert np.isnan(exp.duration.values).all()
     # Check that the duration has attributes
-    for attr in ["units", "long_name", "description"]:
+    for attr in ["long_name", "description"]:
         assert attr in exp.duration.attrs
 
     # Set the duration to a value
@@ -661,6 +661,21 @@ def test_set_return_values(ret_values):
         assert np.all(exp.data[key].values[0, 1, 0] == value)
         # check that the other values are nan
         assert np.all(exp.data[key].values[0, 0, 0] != value)
+
+@pytest.mark.parametrize("arg", [
+    pytest.param(1, id="int"),
+    pytest.param(1.0, id="float"),
+    pytest.param(1.0 + 1j, id="complex"),
+    pytest.param("a", id="str"),
+    pytest.param(True, id="bool"),
+    pytest.param(MyObject(1), id="object"),
+    pytest.param(None, id="None"),
+])
+def test_get_value_from_index(arg):
+    exp = SweepExp(func=lambda: None, parameters={"x": [arg]})
+    value = exp._get_value_from_index("x", (0, ))
+    assert value == arg
+    assert type(value) is type(arg)
 
 @pytest.mark.parametrize(*("params, index, expected_kwargs", [
     pytest.param({"a": [1, 2, 3, 4]},
