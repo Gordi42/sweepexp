@@ -443,12 +443,6 @@ class SweepExp:
             dtype=value.dtype,
             dims=(*self.parameters.keys(), *value.dims),
             attrs=value.attrs)
-        # self.data[name] = xr.DataArray(
-        #     data=np.ma.masked_all((*self.shape, *value.shape), dtype=value.dtype),
-        #     # data=np.full((*self.shape, *value.shape), np.nan, dtype=value.dtype),
-        #     dims=(*self.parameters.keys(), *value.dims),
-        #     attrs=value.attrs,
-        # )
 
     def _upgrade_return_value_type(self, name: str, value: any) -> None:
         """Upgrade the type of the return value if necessary."""

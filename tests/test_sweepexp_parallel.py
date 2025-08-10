@@ -16,7 +16,7 @@ from sweepexp import SweepExpParallel
 # ================================================================
 #  Helpers
 # ================================================================
-class MyObject:
+class MyObject:  # noqa: PLW1641
     def __init__(self, value: int) -> None:
         self.value = value
 
@@ -176,11 +176,14 @@ def test_run_with_xarray_dataarray(caplog):
     for key in ["result", "x_renamed", "status_renamed", "valid4"]:
         assert not exp.data[key].isnull().any(), f"{key} should not contain NaN values"
     # Check the values of the DataArrays
-    assert np.allclose(exp.data["result"].sel({"x": 1, "y": 2.0}).values, [1, 2, 2])
-    assert np.allclose(exp.data["x_renamed"].sel({"x": 2, "y": 1.0}).values, [1, 2, 2])
-    assert np.allclose(exp.data["status_renamed"].sel({"x": 3, "y": 1.0}).values, [1, -3])
+    assert np.allclose(exp.data["result"].sel({"x": 1, "y": 2.0}).values,
+                       [1, 2, 2])
+    assert np.allclose(exp.data["x_renamed"].sel({"x": 2, "y": 1.0}).values,
+                       [1, 2, 2])
+    assert np.allclose(exp.data["status_renamed"].sel({"x": 3, "y": 1.0}).values,
+                       [1, -3])
     assert np.allclose(exp.data["valid4"].sel({"x": 2, "y": 1.0}).values,
-                          [[2, 3], [1, 2], [3, 1]])
+                       [[2, 3], [1, 2], [3, 1]])
 
     # -----------------
     # Check invalid return values
