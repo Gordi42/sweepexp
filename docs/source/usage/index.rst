@@ -5,6 +5,8 @@ Usage
     :maxdepth: 1
     :hidden:
 
+    return_types
+    multidimensional_output
     status
     saving
     custom_input_arguments
@@ -162,6 +164,18 @@ Advanced Topics
 .. grid:: 1 2 2 1
     :margin: 4 4 0 0
     :gutter: 2
+
+    .. grid-item-card::  Return Types
+        :link: return_types
+        :link-type: doc
+
+        Possible return types of the function and how to use them.
+
+    .. grid-item-card::  Multidimensional Output
+        :link: multidimensional_output
+        :link-type: doc
+
+        Use xarray DataArray or Dataset for multidimensional outputs.
 
     .. grid-item-card::  Status
         :link: status
