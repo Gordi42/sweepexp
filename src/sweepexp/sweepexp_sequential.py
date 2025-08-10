@@ -22,17 +22,13 @@ RESERVED_ARGUMENTS = {"uuid", "status", "duration", "priority"}
 POSSIBLE_STATUSES = {"N", "C", "F", "S"}
 SUPPORTED_EXTENSIONS = {".zarr", ".nc", ".cdf", ".pkl"}
 UNSUPPORTED_RETURN_TYPES = {
-    xr.Dataset: (
-        "xarray Dataset is not supported as a return value."
-        "Use a flat dictionary instead."
-    ),
     dict: (
         "Nested dictionaries are not supported as return values. "
         "Use a flat dictionary instead."
     ),
     list: (
         "Lists are not supported as return values. "
-        "Use a numpy array instead."
+        "Use a numpy array or xarray DataArray instead."
     ),
     tuple: (
         "Tuples are not supported as return values. "
@@ -371,7 +367,7 @@ class SweepExp:
                                 ) -> xr.DataArray:
         # get the fill value based on the dtype
         if np.issubdtype(dtype, np.integer):
-            fill_value = -1  # use -1 for integer types
+            fill_value = np.iinfo(dtype).min  # use the minimum value for integers
         elif np.issubdtype(dtype, np.bool_):
             fill_value = False  # use False for boolean types
         else:
@@ -472,6 +468,9 @@ class SweepExp:
         self.data[name] = self.data[name].astype(target_dtype)
 
     def _set_return_value_at(self, index: tuple[int], name: str, value: any) -> None:
+        if isinstance(value, xr.Dataset):
+            self._set_xarray_dataset_at(index, value)
+            return
         # Potentially create a new data variable for new return values
         if ( (name in self._taken_names and name not in self._name_mapping)
                 or name not in self.data.data_vars):
@@ -490,6 +489,11 @@ class SweepExp:
         self._upgrade_return_value_type(name, value)
         # Set the value in the data
         self.data[name].data[index] = value
+
+    def _set_xarray_dataset_at(self, index: tuple[int], value: xr.Dataset) -> None:
+        # loop through the data variables
+        for name, dataarray in value.data_vars.items():
+            self._set_return_value_at(index, name, dataarray)
 
     def _set_return_values_at(self,
                               index: tuple[int],

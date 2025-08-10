@@ -815,7 +815,6 @@ def test_process_return_values(return_values, keys):
     pytest.param([3, 2], id="list"),
     pytest.param((3, 2), id="tuple"),
     pytest.param({"a": 1}, id="dict"),
-    pytest.param(xr.Dataset(), id="Dataset"),
 ])
 def test_add_unsupported_return_type(return_value, caplog):
     """Test the _process_return_values function with an unsupported return type."""
@@ -989,7 +988,6 @@ def test_argument_type(arg, caplog):
     assert (data.status == "C").all()
     kwargs = {"x": arg}
     assert f"Starting: {kwargs}" in caplog.text
-
 
 # ----------------------------------------------------------------
 #  Test the run function
@@ -1293,6 +1291,12 @@ def test_run_continue(save_path):
             "duration": x * 3.1,  # this variable will be renamed
             "none_value": None,
             "data_arr": xr.DataArray([x, -x], coords={"d2": [0.0, 1.1]}),
+            "data_set": xr.Dataset(
+                {"data1": xr.DataArray(
+                    [[2*x, -2*x], [x, -x], [0,0]],
+                     coords={"d1": [0, 1, 2], "d2": [0.0, 1.1]}),
+                 "data2": xr.DataArray([x*2, x*3, x*4], coords={"d1": [0, 1, 2]}),
+                 }),
         }
 
     exp = SweepExp(
@@ -1320,6 +1324,12 @@ def test_run_continue(save_path):
             "duration": x * 2.9,  # this variable will be renamed
             "none_value": None,
             "data_arr": xr.DataArray([-x, x], coords={"d2": [0.0, 1.1]}),
+            "data_set": xr.Dataset(
+                {"data1": xr.DataArray(
+                    [[-2*x, 2*x], [-x, x], [1,1]],
+                     coords={"d1": [0, 1, 2], "d2": [0.0, 1.1]}),
+                 "data2": xr.DataArray([-x*2, -x*3, -x*4], coords={"d1": [0, 1, 2]}),
+                 }),
         }
     exp2 = SweepExp(
         func=complex_func2,
@@ -1342,3 +1352,11 @@ def test_run_continue(save_path):
     assert exp2.data["none_value"].isnull().all().item()
     assert set(exp2.data["data_arr"].dims) == {"x", "d2"}
     assert np.allclose(exp2.data["data_arr"].values, [[1, -1], [-2, 2], [3, -3]])
+    # check the dataset
+    assert set(exp2.data["data1"].dims) == {"x", "d1", "d2"}
+    assert set(exp2.data["data2"].dims) == {"x", "d1"}
+    assert np.allclose(exp2.data["data1"].values,
+                          [[[2, -2], [1, -1], [0, 0]],
+                            [[-4, 4], [-2, 2], [1, 1]],
+                            [[6, -6], [3, -3], [0, 0]]])
+    assert np.allclose(exp2.data["data2"].values, [[2, 3, 4], [-4, -6, -8], [6, 9, 12]])
