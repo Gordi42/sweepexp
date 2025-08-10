@@ -109,6 +109,11 @@ def test_init_no_file(parameters, exp_func):
     )
     assert isinstance(exp, SweepExp)
 
+@pytest.mark.parametrize("reserved_name", ["uuid", "duration", "priority", "status"])
+def test_init_reserved_name(reserved_name):
+    with pytest.raises(ValueError, match="The parameters contains reserved names."):
+        SweepExp(func=None, parameters={reserved_name: [1, 2, 3]})
+
 def test_init_with_nonexistent_file(parameters, exp_func, save_path):
     """Test the initialization of the SweepExp class with a nonexistent file."""
     # Create the experiment

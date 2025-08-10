@@ -32,14 +32,14 @@ with output:
 
     INFO - Found 6 experiments to run.
     DEBUG - 6 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': 1, 'y': 3}
+    DEBUG - Starting: {'x': 1, 'y': 3}
     DEBUG - 5 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': 1, 'y': 4}
+    DEBUG - Starting: {'x': 1, 'y': 4}
     DEBUG - 4 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': 1, 'y': 5}
+    DEBUG - Starting: {'x': 1, 'y': 5}
     DEBUG - 3 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': 2, 'y': 3}
+    DEBUG - Starting: {'x': 2, 'y': 3}
     DEBUG - 2 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': 2, 'y': 4}
+    DEBUG - Starting: {'x': 2, 'y': 4}
     DEBUG - 1 experiments left.
-    DEBUG - Running experiment with kwargs: {'x': 2, 'y': 5}
+    DEBUG - Starting: {'x': 2, 'y': 5}

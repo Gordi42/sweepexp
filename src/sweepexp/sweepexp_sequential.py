@@ -101,7 +101,8 @@ class SweepExp:
         # Check that none of the parameters are reserved
         reserved_parameters = set(parameters) & RESERVED_ARGUMENTS
         if reserved_parameters:
-            msg = "The following parameter names are reserved: "
+            msg = "The parameters contains reserved names. "
+            msg += "The following parameter names are reserved: "
             msg += f"{reserved_parameters}."
             msg += "Please choose different names."
             raise ValueError(msg)
@@ -685,8 +686,6 @@ class SweepExp:
 
     def _remove_existing_data(self) -> None:
         """Remove the existing data at the save path."""
-        if self.save_path is None:
-            return
         if not self.save_path.exists():
             return
         if self.save_path.suffix == ".zarr":

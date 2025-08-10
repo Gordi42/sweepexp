@@ -69,3 +69,7 @@ def test_mpi_fallback(caplog):
     else:
         assert isinstance(sweep, SweepExpParallel)
         assert "Fallback to 'parallel' mode." in caplog.text
+
+def test_invalid_mode():
+    with pytest.raises(ValueError, match="Unknown mode 'invalid'."):
+        sweepexp(func=None, parameters={}, mode="invalid")

@@ -106,6 +106,13 @@ def test_argument_type(arg, caplog):
         kwargs = {"x": arg}
         assert f"Rank 1 - Starting: {kwargs}" in caplog.text
 
+@pytest.mark.mpi(min_size=1)
+def test_too_few_ranks():
+    if MPI.COMM_WORLD.Get_size() > 1:
+        pytest.skip("This test requires only one rank to run.")
+    with pytest.raises(ValueError, match="At least two ranks are required"):
+        SweepExpMPI(func=None, parameters={}).run()
+
 @pytest.mark.mpi(min_size=2)
 def test_run_api(caplog):
     exp = SweepExpMPI(func=lambda x: {"a": 2*x}, parameters={"x": [1, 2]})

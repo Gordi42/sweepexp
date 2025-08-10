@@ -38,12 +38,14 @@ jobs:
 
     - name: Run the tests
       run: |
-        # only run the coverage test with openmpi
-        if [ "${{ matrix.mpi }}" = "openmpi" ]; then
-            mpiexec -n 3 bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --with-mpi --junitxml=junit.xml -o junit_family=legacy tests/test_sweepexp_mpi.py tests/test_sweepexp.py'
-        else
-            mpiexec -n 3 pytest --with-mpi tests/test_sweepexp_mpi.py tests/test_sweepexp.py
-        fi
+        for n_processes in 1 2 3; do
+          # only run the coverage test with openmpi
+          if [ "${{ matrix.mpi }}" = "openmpi" ]; then
+              mpiexec -n $n_processes bash -c 'COVERAGE_FILE=.coverage.$OMPI_COMM_WORLD_RANK pytest --cov=src --with-mpi --junitxml=junit.xml -o junit_family=legacy tests/test_sweepexp_mpi.py tests/test_sweepexp.py'
+          else
+              mpiexec -n $n_processes pytest --with-mpi tests/test_sweepexp_mpi.py tests/test_sweepexp.py
+          fi
+        done
 
     - name: Combine coverage reports
       run: |
