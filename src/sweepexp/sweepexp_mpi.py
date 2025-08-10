@@ -86,6 +86,12 @@ class SweepExpMPI(SweepExp):
         if IS_MAIN_RANK:
             super().save(mode=mode)
 
+    def _load_data_from_file(self) -> xr.Dataset:
+        if IS_MAIN_RANK:
+            return super()._load_data_from_file()
+        # If this is not the main rank, we don't load the data (just create as usual)
+        return self._create_data()
+
     def run(self,  # noqa: D102
             status: str | list[str] | None = "N",
             max_workers: int | None = None,

@@ -22,10 +22,6 @@ RESERVED_ARGUMENTS = {"uuid", "status", "duration", "priority"}
 POSSIBLE_STATUSES = {"N", "C", "F", "S"}
 SUPPORTED_EXTENSIONS = {".zarr", ".nc", ".cdf", ".pkl"}
 UNSUPPORTED_RETURN_TYPES = {
-    xr.DataArray: (
-        "xarray DataArray is not supported as a return value. "
-        "Use a numpy array instead."
-    ),
     xr.Dataset: (
         "xarray Dataset is not supported as a return value."
         "Use a flat dictionary instead."
@@ -359,8 +355,12 @@ class SweepExp:
         # Add a new dataarray to the data (data may already exist from a previous run)
         if name not in self.data.data_vars:
             self.data[name] = xr.DataArray(
+                # data=np.ma.masked_all(self.shape, dtype=dtype),
                 data=np.full(self.shape, np.nan, dtype=dtype),
                 dims=self.parameters.keys())
+            # if the return type is invalid, we add an attribute to the dataarray
+            if name in self._invalid_names:
+                self.data[name].attrs["sweep_info"] = "invalid"
 
         # We return the possibly renamed name
         return name
@@ -428,6 +428,7 @@ class SweepExp:
 
         # Now we can add the new data variable to the data
         self.data[name] = xr.DataArray(
+            # data=np.ma.masked_all((*self.shape, *value.shape), dtype=value.dtype),
             data=np.full((*self.shape, *value.shape), np.nan, dtype=value.dtype),
             dims=(*self.parameters.keys(), *value.dims),
             attrs=value.attrs,
@@ -437,13 +438,18 @@ class SweepExp:
         """Upgrade the type of the return value if necessary."""
         # Get the current dtype of the return value
         current_dtype = self.data[name].dtype
+        # Get the target dtype
+        if isinstance(value, xr.DataArray):
+            target_dtype = value.dtype
+        else:
+            target_dtype = np.dtype(type(value))
         # If the value is of a different type, we need to upgrade it
-        if np.can_cast(np.dtype(type(value)), current_dtype):
+        if np.can_cast(target_dtype, current_dtype):
             return
         # Get the new dtype based on the value type
-        dtype = np.dtype(object) if type(value) is str else np.dtype(type(value))
+        target_dtype = np.dtype(object) if type(value) is str else target_dtype
         # Cast the data to the new dtype
-        self.data[name] = self.data[name].astype(dtype)
+        self.data[name] = self.data[name].astype(target_dtype)
 
     def _set_return_value_at(self, index: tuple[int], name: str, value: any) -> None:
         # Potentially create a new data variable for new return values
@@ -457,6 +463,8 @@ class SweepExp:
         if name in self._invalid_names:
             # We don't need to print an error here, because we already did that
             # in the _add_new_return_value method
+            return
+        if self.data[name].attrs.get("sweep_info") == "invalid":
             return
         # Check if the value can be converted to the type of the return value
         self._upgrade_return_value_type(name, value)
@@ -517,8 +525,8 @@ class SweepExp:
 
         # We need to do a bunch of checks to make sure the data is correct
 
-        # Compare the parameters
-        if set(data.coords) != set(self.parameters.keys()):
+        # Check that all the parameters are in the dateset
+        if not set(self.parameters.keys()).issubset(data.coords):
             msg = "Parameter mismatch: "
             msg += f"Expected: {set(self.parameters.keys())}, "
             msg += f"Got: {set(data.coords)}."
