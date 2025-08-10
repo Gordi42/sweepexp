@@ -634,7 +634,7 @@ def test_sort_indices(with_priorities, expected_indices, first_kw):
     pytest.param({"b": 1.0}, id="float"),
     pytest.param({"c": 1.0 + 1j}, id="complex"),
     pytest.param({"d": "a"}, id="str"),
-    pytest.param({"e": False}, id="bool"),
+    pytest.param({"e": True}, id="bool"),
     pytest.param({"f": np.linspace(0, 1, 10)}, id="np.ndarray"),
     pytest.param({"g": MyObject(1)}, id="object"),
     pytest.param({"a": 1, "b": 1.0}, id="int and float"),
@@ -988,7 +988,7 @@ def test_argument_type(arg, caplog):
 
     assert (data.status == "C").all()
     kwargs = {"x": arg}
-    assert f"Running experiment with kwargs: {kwargs}" in caplog.text
+    assert f"Starting: {kwargs}" in caplog.text
 
 
 # ----------------------------------------------------------------
@@ -1285,7 +1285,7 @@ def test_run_with_auto_save(save_path, method):
         assert np.allclose(ex.data["data_arr"].values, [[1, -1], [2, -2], [3, -3]])
 
 def test_run_continue(save_path):
-    def complex_func1(x: int) -> dictmode:
+    def complex_func1(x: int) -> dict:
         return {
             "res": 2*x,
             "x": True,  # this variable will be renamed

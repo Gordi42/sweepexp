@@ -105,7 +105,7 @@ class SweepExpParallel(SweepExp):
                 # Remove the first process, start it and add it to the active processes
                 job = jobs.pop(0)
                 kwargs = self._get_kwargs(job["index"])
-                log.debug(f"Starting job with kwargs: {kwargs}")
+                log.debug(f"Starting: {kwargs}")
                 job["process"].start()
                 active_jobs.append(job)
 
@@ -138,7 +138,7 @@ class SweepExpParallel(SweepExp):
             return_values = {}
             status = "F"
         else:
-            log.debug(f"Finished experiment with kwargs: {self._get_kwargs(index)}")
+            log.debug(f"Finished: {self._get_kwargs(index)}")
             status = "C"
 
         # Set the status and return values of the experiment

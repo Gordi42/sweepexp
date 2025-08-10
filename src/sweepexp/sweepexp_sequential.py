@@ -293,7 +293,7 @@ class SweepExp:
     def _run_single(self, index: tuple[int]) -> None:
         """Run the experiment at the given index."""
         kwargs = self._get_kwargs(index)
-        log.debug(f"Running experiment with kwargs: {kwargs}")
+        log.debug(f"Starting: {kwargs}")
         if self.timeit:
             start_time = time.time()
         try:
@@ -354,16 +354,31 @@ class SweepExp:
             self._add_xarray_dataarray(name, value)
         # Add a new dataarray to the data (data may already exist from a previous run)
         if name not in self.data.data_vars:
-            self.data[name] = xr.DataArray(
-                # data=np.ma.masked_all(self.shape, dtype=dtype),
-                data=np.full(self.shape, np.nan, dtype=dtype),
-                dims=self.parameters.keys())
+            self.data[name] = self._create_empty_dataarray(
+                shape=self.shape, dtype=dtype, dims=self.parameters.keys())
             # if the return type is invalid, we add an attribute to the dataarray
             if name in self._invalid_names:
                 self.data[name].attrs["sweep_info"] = "invalid"
 
         # We return the possibly renamed name
         return name
+
+    def _create_empty_dataarray(self,
+                                shape: tuple[int, ...],
+                                dtype: np.dtype,
+                                dims: tuple[str, ...],
+                                attrs: dict[str, any] | None = None,
+                                ) -> xr.DataArray:
+        # get the fill value based on the dtype
+        if np.issubdtype(dtype, np.integer):
+            fill_value = -1  # use -1 for integer types
+        elif np.issubdtype(dtype, np.bool_):
+            fill_value = False  # use False for boolean types
+        else:
+            fill_value = np.nan
+        # create the numpy array
+        data = np.full(shape, fill_value, dtype=dtype)
+        return xr.DataArray(data=data, dims=dims, attrs=attrs or {})
 
     def _add_new_xarray_dimension_from_returned_dataarray(
             self, dim_name: str, coordinates: list | np.ndarray) -> bool:
@@ -427,12 +442,17 @@ class SweepExp:
             return
 
         # Now we can add the new data variable to the data
-        self.data[name] = xr.DataArray(
-            # data=np.ma.masked_all((*self.shape, *value.shape), dtype=value.dtype),
-            data=np.full((*self.shape, *value.shape), np.nan, dtype=value.dtype),
+        self.data[name] = self._create_empty_dataarray(
+            shape=(*self.shape, *value.shape),
+            dtype=value.dtype,
             dims=(*self.parameters.keys(), *value.dims),
-            attrs=value.attrs,
-        )
+            attrs=value.attrs)
+        # self.data[name] = xr.DataArray(
+        #     data=np.ma.masked_all((*self.shape, *value.shape), dtype=value.dtype),
+        #     # data=np.full((*self.shape, *value.shape), np.nan, dtype=value.dtype),
+        #     dims=(*self.parameters.keys(), *value.dims),
+        #     attrs=value.attrs,
+        # )
 
     def _upgrade_return_value_type(self, name: str, value: any) -> None:
         """Upgrade the type of the return value if necessary."""

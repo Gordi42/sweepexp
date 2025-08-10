@@ -63,7 +63,7 @@ def test_argument_type(arg, caplog):
 
     assert (data.status == "C").all()
     kwargs = {"x": arg}
-    assert f"Finished experiment with kwargs: {kwargs}" in caplog.text
+    assert f"Finished: {kwargs}" in caplog.text
 
 def test_standard_run():
     # Define a simple function
@@ -205,7 +205,6 @@ def test_run_with_xarray_dataarray(caplog):
         assert exp.data[key].isnull().all().item()
         # dimensions should be just x, y
         assert set(exp.data[key].dims) == {"x", "y"}
-
 
 def test_run_with_uuid(temp_dir):
     # Create a function that takes the uuis an an argument and write

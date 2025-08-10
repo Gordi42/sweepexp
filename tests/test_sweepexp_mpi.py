@@ -104,7 +104,7 @@ def test_argument_type(arg, caplog):
         pass  # The Address of the object is different on each rank
     elif MPI.COMM_WORLD.Get_rank() == 1:
         kwargs = {"x": arg}
-        assert f"Rank 1 - Start experiment with kwargs: {kwargs}" in caplog.text
+        assert f"Rank 1 - Starting: {kwargs}" in caplog.text
 
 @pytest.mark.mpi(min_size=2)
 def test_run_api(caplog):
