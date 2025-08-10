@@ -101,54 +101,35 @@ Allowed Return Types
 
 Only the following data types are supported for return values (or their elements if returned as tuples or dictionaries):
 
-+---------------------+--------------------------+---------------------------+
-| Type                | dtype                    | Fill Value                |
-+=====================+==========================+===========================+
-| `int`               | `np.int64`               | `-9223372036854775808`    |
-+---------------------+--------------------------+---------------------------+
-| `float`             | `np.float64`             | `np.nan`                  |
-+---------------------+--------------------------+---------------------------+
-| `complex`           | `np.complex128`          | `np.nan`                  |
-+---------------------+--------------------------+---------------------------+
-| `str`               | `object`                 | `np.nan`                  |
-+---------------------+--------------------------+---------------------------+
-| `bool`              | `np.bool_`               | `False`                   |
-+---------------------+--------------------------+---------------------------+
-| `xarray.DataArray`  | dtype matches DataArray  | `np.nan`                  |
-+---------------------+--------------------------+---------------------------+
-| `xarray.Dataset`    | dtype matches DataArrays | `np.nan`                  |
-+---------------------+--------------------------+---------------------------+
-| `np.ndarray` (not_recommended) | `object`      | `np.nan`                  |
-+---------------------+--------------------------+---------------------------+
-| `object` (not recommended) | `object`          | `np.nan`                  |
-+---------------------+--------------------------+---------------------------+
-| `list`              | Not supported            |                           |
-+---------------------+--------------------------+---------------------------+
-| `tuple`             | Not supported            |                           |
-+---------------------+--------------------------+---------------------------+
-| `dict`              | Not supported            |                           |
-+---------------------+--------------------------+---------------------------+
++--------------------------------+--------------------------+---------------------------+
+| Type                           | dtype                    | Fill Value                |
++================================+==========================+===========================+
+| `int`                          | `np.int64`               | `-9223372036854775808`    |
++--------------------------------+--------------------------+---------------------------+
+| `float`                        | `np.float64`             | `np.nan`                  |
++--------------------------------+--------------------------+---------------------------+
+| `complex`                      | `np.complex128`          | `np.nan`                  |
++--------------------------------+--------------------------+---------------------------+
+| `str`                          | `object`                 | `np.nan`                  |
++--------------------------------+--------------------------+---------------------------+
+| `bool`                         | `np.bool_`               | `False`                   |
++--------------------------------+--------------------------+---------------------------+
+| `xarray.DataArray`             | dtype matches DataArray  | `np.nan`                  |
++--------------------------------+--------------------------+---------------------------+
+| `xarray.Dataset`               | dtype matches DataArrays | `np.nan`                  |
++--------------------------------+--------------------------+---------------------------+
+| `np.ndarray` (not_recommended) | `object`                 | `np.nan`                  |
++--------------------------------+--------------------------+---------------------------+
+| `object` (not recommended)     | `object`                 | `np.nan`                  |
++--------------------------------+--------------------------+---------------------------+
+| `list`                         | Not supported            |                           |
++--------------------------------+--------------------------+---------------------------+
+| `tuple`                        | Not supported            |                           |
++--------------------------------+--------------------------+---------------------------+
+| `dict`                         | Not supported            |                           |
++--------------------------------+--------------------------+---------------------------+
 
 Note that while the experiment function itself may return a dictionary or tuple to package multiple values, these containers may only include the supported types listed above.
 
-For detailed information on handling `xarray.DataArray` and `xarray.Dataset`, refer to the :ref:`multidimensional output <multidimensional_output>` section.
+For detailed information on handling `xarray.DataArray` and `xarray.Dataset`, refer to the `Multidimensional Output` section.
 
-
-
-
-
-xarray DataArrays sind der empfohlene Rückgabetyp für multidimensionale Daten.
-Die Dimensionen und Koordinaten des DataArrays werden automatisch im SweepExp Dataset hinzugefügt. Attribute und Metadaten des DataArrays werden ebenfalls übernommen.
-
-
-
-`xarray.Dataset`
-~~~~~~~~~~~~~~~~
-Für komplexere Datenstrukturen ist es möglich, ein `xarray.Dataset` zurückzugeben.
-Dabei werden die einzelnen DataArrays als Variablen im Ergebnis gespeichert.
-Beachte, dass Metadaten des Datasets nicht übernommen werden, die Attribute der
-enthaltenen DataArrays jedoch schon.
-
-NumPy Arrays sind zwar erlaubt als Rückgabetypen, aber sie sind nicht empfohlen.
-Die Ergebnisse werden in einem DataArray vom Typ `object` gespeichert. Ergebnisse
-können dann nicht mehr als netCDF oder `zarr` gespeichert werden. Um dieses Problem zu umgehen, solltest du stattdessen `xarray.DataArray` verwenden.

@@ -49,6 +49,7 @@ Returning an `xarray.DataArray`
         xr_data  (x, y) int64 48B 1 2 0 2 3 1
 
 In this example:
+
 - The function returns an `xarray.DataArray` named `"xr_data"` and dimension `y` with length 3.
 - After the sweep, `xr_data` has dimensions `(x, y)`,  
 
@@ -58,5 +59,6 @@ Similarly, you can return an `xarray.Dataset`. For which each `DataArray` inside
 the Dataset becomes a separate variable in the results.
 
 Notes:
+
 - Dataset-level metadata is **not** preserved.
 - Attributes of the contained DataArrays **are** preserved.
