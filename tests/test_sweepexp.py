@@ -3,11 +3,22 @@ from __future__ import annotations
 
 import pytest
 
-from sweepexp import SweepExp, SweepExpMPI, SweepExpParallel, sweepexp
+from sweepexp import SweepExp, SweepExpParallel, sweepexp
 
 # ================================================================
 #  Helpers
 # ================================================================
+# Try to import mpi4py, if not available, skip the tests
+modes = ["parallel", "sequential"]
+try:
+    from sweepexp import SweepExpMPI
+    mpi_available = True
+    modes.append("mpi")
+except ImportError:
+    SweepExpMPI = None
+    modes.append(pytest.param("mpi", marks=pytest.mark.skip(
+        reason="mpi4py not available")))
+    mpi_available = False
 
 # ================================================================
 #  Fixtures
@@ -30,7 +41,7 @@ def test_init_default():
     assert exp.parameters == parameters
     assert exp.timeit == timeit
 
-@pytest.mark.parametrize("mode", ["parallel", "mpi", "sequential"])
+@pytest.mark.parametrize("mode", modes)
 def test_init_with_given_mode(mode):
     mode_type = {"parallel": SweepExpParallel,
                  "mpi": SweepExpMPI,
@@ -49,3 +60,12 @@ def test_init_with_given_mode(mode):
     assert exp.func == my_experiment
     assert exp.parameters == parameters
     assert exp.timeit == timeit
+
+def test_mpi_fallback(caplog):
+    with caplog.at_level("WARNING"):
+        sweep = sweepexp(func=None, parameters={}, mode="mpi")
+    if mpi_available:
+        assert isinstance(sweep, SweepExpMPI)
+    else:
+        assert isinstance(sweep, SweepExpParallel)
+        assert "Fallback to 'parallel' mode." in caplog.text

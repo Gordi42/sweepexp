@@ -74,7 +74,13 @@ def sweepexp(
         "save_path": save_path,
     })
     if mode == "mpi":
-        return se.SweepExpMPI(**kwargs)
+        try:
+            return se.SweepExpMPI(**kwargs)
+        except ImportError:
+            msg = "Failed to import 'mpi4py'. "
+            msg += "Fallback to 'parallel' mode."
+            se.log.warning(msg)
+            return se.SweepExpParallel(**kwargs)
     if mode == "parallel":
         return se.SweepExpParallel(**kwargs)
     if mode == "sequential":
